@@ -71,9 +71,8 @@ Powered by [football-data.org](https://www.football-data.org/) for all major lea
 
 ```bash
 
- git clone https://github.com/AleksandarPetrovv/NinetyPlus
-
- cd NinetyPlus
+git clone https://github.com/AleksandarPetrovv/NinetyPlus
+cd NinetyPlus
 
 ```
 
@@ -85,9 +84,8 @@ Powered by [football-data.org](https://www.football-data.org/) for all major lea
 
 ```bash
 
- cd backend
-
- python -m venv venv
+cd backend
+python -m venv venv
 
 ```
 
@@ -101,13 +99,13 @@ Powered by [football-data.org](https://www.football-data.org/) for all major lea
 
 # For Windows
 
- venv\Scripts\activate
+venv\Scripts\activate
 
   
 
 # For macOS/Linux
 
- source venv/bin/activate
+source venv/bin/activate
 
 ```
 
@@ -119,7 +117,7 @@ Powered by [football-data.org](https://www.football-data.org/) for all major lea
 
 ```bash
 
- pip install -r requirements.txt
+pip install -r requirements.txt
 
 ```
 
@@ -131,27 +129,17 @@ Powered by [football-data.org](https://www.football-data.org/) for all major lea
 
 ```dotenv
 
- SECRET_KEY=your_django_secret_key
+SECRET_KEY=your_django_secret_key
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
 
- DEBUG=True
+DB_NAME=ninetyplus
+DB_USER=your_db_username
+DB_PASSWORD=your_db_password
+DB_HOST=localhost
+DB_PORT=3306
 
- ALLOWED_HOSTS=localhost,127.0.0.1
-
-  
-
- DB_NAME=ninetyplus
-
- DB_USER=your_db_username
-
- DB_PASSWORD=your_db_password
-
- DB_HOST=localhost
-
- DB_PORT=3306
-
-  
-
- FOOTBALL_API_KEY=your_football_data_api_key
+FOOTBALL_API_KEY=your_football_data_api_key
 
 ```
 
@@ -163,19 +151,13 @@ Powered by [football-data.org](https://www.football-data.org/) for all major lea
 
 ```sql
 
- mysql -u root -p
+mysql -u root -p
 
-  
-
- CREATE  DATABASE ninetyplus;
-
- CREATE  USER  'your_db_username'@'localhost' IDENTIFIED BY  'your_db_password';
-
- GRANT  ALL  PRIVILEGES  ON ninetyplus.*  TO  'your_db_username'@'localhost';
-
- FLUSH PRIVILEGES;
-
- EXIT;
+CREATE  DATABASE ninetyplus;
+CREATE  USER  'your_db_username'@'localhost' IDENTIFIED BY  'your_db_password';
+GRANT  ALL  PRIVILEGES  ON ninetyplus.*  TO  'your_db_username'@'localhost';
+FLUSH PRIVILEGES;
+EXIT;
 
 ```
 
@@ -187,9 +169,8 @@ Powered by [football-data.org](https://www.football-data.org/) for all major lea
 
 ```bash
 
- python manage.py migrate
-
- python manage.py runserver
+python manage.py migrate
+python manage.py runserver
 
 ```
 
@@ -200,7 +181,7 @@ Powered by [football-data.org](https://www.football-data.org/) for all major lea
 
 ```bash
 
- cd frontend
+cd frontend
 
 ```
 
@@ -208,7 +189,7 @@ Powered by [football-data.org](https://www.football-data.org/) for all major lea
 
 ```bash
 
- npm install
+npm install
 
 ```
 
@@ -216,7 +197,7 @@ Powered by [football-data.org](https://www.football-data.org/) for all major lea
 
 ```dotenv
 
- VITE_API_URL=http://localhost:8000/api
+VITE_API_URL=http://localhost:8000/api
 
 ```
 
@@ -224,7 +205,7 @@ Powered by [football-data.org](https://www.football-data.org/) for all major lea
 
 ```bash
 
- npm run dev
+npm run dev
 
 ```
 
