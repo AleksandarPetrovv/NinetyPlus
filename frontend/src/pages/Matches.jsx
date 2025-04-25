@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { getMatches } from "../services/footballService"
 import { TOP_LEAGUES } from "../config/leagues"
-import MatchDetailsModal from "../components/MatchDetailsModal"
+import MatchDetails from "../components/MatchDetails"
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
 import { LEAGUE_ICONS } from '../config/leagueIcons'
@@ -146,15 +146,23 @@ function Matches() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="grid gap-4 mb-8">
-        {matches.map((match) => (
-          <MatchCard
+        {matches.map((match, index) => (
+          <div
             key={match.id}
-            match={match}
-            onClick={() => setSelectedMatch(match)}
-          />
+            style={{ 
+              animation: `matchCardEnter 0.3s ease-out forwards`,
+              animationDelay: `${index * 0.05}s`,
+              opacity: 0
+            }}
+          >
+            <MatchCard
+              match={match}
+              onClick={() => setSelectedMatch(match)}
+            />
+          </div>
         ))}
       </div>
-      <MatchDetailsModal
+      <MatchDetails
         match={selectedMatch}
         isOpen={!!selectedMatch}
         onClose={() => setSelectedMatch(null)}

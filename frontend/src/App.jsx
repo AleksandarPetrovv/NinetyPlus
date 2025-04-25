@@ -3,6 +3,10 @@ import Navbar from './components/Navbar'
 import Home from './pages/Home'
 import Matches from './pages/Matches'
 import Standings from './pages/Standings'
+import Profile from './pages/Profile'
+import { AuthProvider } from './context/AuthContext'
+import { ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 function Layout() {
   return (
@@ -11,6 +15,18 @@ function Layout() {
       <main className="container mx-auto px-4 py-8">
         <Outlet />
       </main>
+      <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="dark"
+      />
     </div>
   )
 }
@@ -21,6 +37,7 @@ const router = createBrowserRouter(
       <Route path="/" element={<Home />} />
       <Route path="/matches" element={<Matches />} />
       <Route path="/standings" element={<Standings />} />
+      <Route path="/profile" element={<Profile />} />
     </Route>
   ),
   {
@@ -34,9 +51,11 @@ const router = createBrowserRouter(
 
 function App() {
   return (
-    <RouterProvider router={router} future={{ 
-      v7_startTransition: true 
-    }} />
+    <AuthProvider>
+      <RouterProvider router={router} future={{ 
+        v7_startTransition: true 
+      }} />
+    </AuthProvider>
   );
 }
 

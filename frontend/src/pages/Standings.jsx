@@ -68,34 +68,71 @@ function Standings() {
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex justify-between items-center mb-8">
-        <div className="flex items-center space-x-4">
+        <div 
+          className="flex items-center space-x-4"
+          key={selectedLeague.id}
+          style={{ 
+            animation: 'fadeIn 0.3s ease-out forwards'
+          }}
+        >
           <img 
             src={LEAGUE_ICONS[selectedLeague.id]} 
             alt="" 
             className="w-12 h-12 object-contain"
+            style={{ 
+              animation: 'logoBlip 0.3s ease-out forwards'
+            }}
           />
-          <h1 className="text-4xl font-bold text-purple-400">
+          <h1 
+            className="text-4xl font-bold text-purple-400"
+            style={{
+              animation: 'slideInRight 0.3s ease-out forwards'
+            }}
+          >
             {selectedLeague.name}
           </h1>
         </div>
-        <select 
-          value={selectedLeague.id}
-          onChange={(e) => {
-            const league = DOMESTIC_LEAGUES.find(l => l.id === Number(e.target.value))
-            setSelectedLeague(league)
-          }}
-          className="px-4 py-2 rounded-lg bg-dark-300 border border-dark-400 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-        >
-          {DOMESTIC_LEAGUES.map(league => (
-            <option key={league.id} value={league.id}>
-              {league.name} ({league.country})
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <select 
+            value={selectedLeague.id}
+            onChange={(e) => {
+              const league = DOMESTIC_LEAGUES.find(l => l.id === Number(e.target.value))
+              setSelectedLeague(league)
+            }}
+            className="px-4 py-2 pr-10 rounded-lg bg-dark-300 border border-dark-400 text-gray-200 
+                       focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
+                       transition-all duration-300 hover:bg-dark-400 appearance-none"
+            style={{
+              animation: 'fadeIn 0.3s ease-out forwards'
+            }}
+          >
+            {DOMESTIC_LEAGUES.map(league => (
+              <option key={league.id} value={league.id}>
+                {league.name} ({league.country})
+              </option>
+            ))}
+          </select>
+          <div 
+            className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-purple-400"
+            style={{
+              animation: 'fadeIn 0.4s ease-out forwards'
+            }}
+          >
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd"></path>
+            </svg>
+          </div>
+        </div>
       </div>
 
       <div className="bg-dark-200 rounded-xl shadow-lg overflow-hidden border border-dark-300">
-        <div className="overflow-x-auto">
+        <div 
+          className="overflow-x-auto"
+          key={selectedLeague.id}
+          style={{ 
+            animation: 'tableTransition 0.3s ease-out forwards' 
+          }}
+        >
           <table className="min-w-full">
             <thead>
               <tr className="bg-dark-300 text-gray-200">
