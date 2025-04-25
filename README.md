@@ -121,11 +121,19 @@ pip install -r requirements.txt
 
 ```
 
-  
+- #### Copy your secret django key
+
+
+
+```bash
+
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+
+```
 
 - #### Create `.env` file
 
-  
+
 
 ```dotenv
 
@@ -169,6 +177,7 @@ EXIT;
 
 ```bash
 
+python manage.py makemigrations
 python manage.py migrate
 python manage.py runserver
 
