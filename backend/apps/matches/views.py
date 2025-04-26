@@ -11,6 +11,7 @@ from django.http import HttpResponse
 from django.views import View
 import json
 from bs4 import BeautifulSoup
+import datetime
 
 FOOTBALL_API_URL = 'https://api.football-data.org/v4'
 FOOTBALL_API_KEY = os.getenv('FOOTBALL_API_KEY')
@@ -134,3 +135,28 @@ def fetch_site_source(request):
         return Response({
             'error': str(e),
         }, status=500)
+
+@api_view(['GET'])
+def get_team_matches(request, team_id):
+    try:
+        today = datetime.datetime.now().strftime('%Y-%m-%d')
+        thirty_days_later = (datetime.datetime.now() + datetime.timedelta(days=30)).strftime('%Y-%m-%d')
+        
+        response = requests.get(
+            f'{FOOTBALL_API_URL}/teams/{team_id}/matches',
+            params={
+                'dateFrom': today,
+                'dateTo': thirty_days_later,
+                'status': 'SCHEDULED,TIMED'
+            },
+            headers={'X-Auth-Token': FOOTBALL_API_KEY}
+        )
+        
+        if response.status_code == 200:
+            return Response(response.json())
+        else:
+            return Response({
+                'error': f"Failed to fetch team matches: {response.status_code}"
+            }, status=response.status_code)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)

@@ -9,6 +9,8 @@ from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authtoken.models import Token
+from datetime import timedelta
+from apps.comments.models import Comment
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
@@ -55,7 +57,7 @@ def profile(request):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
-        fields = ['favorite_team_id', 'favorite_team_name', 'favorite_team_crest']
+        fields = ['favorite_team_id', 'favorite_team_name', 'favorite_team_crest', 'favorite_team_league', 'favorite_team_country']
 
 @api_view(['GET', 'PUT'])
 @permission_classes([IsAuthenticated])
@@ -72,3 +74,44 @@ def user_favorite_team(request):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_details(request):
+    user = request.user
+    
+    local_date = user.date_joined + timedelta(hours=3)
+    
+    return Response({
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'join_date': local_date.strftime('%Y-%m-%d'),
+        'join_time': local_date.strftime('%H:%M:%S')
+    })
+
+@api_view(['GET'])
+def public_profile(request, username):
+    try:
+        user = User.objects.get(username=username)
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        
+        comment_count = Comment.objects.filter(user=user).count()
+        
+        local_date = user.date_joined + timedelta(hours=3)
+        
+        return Response({
+            'username': user.username,
+            'join_date': local_date.strftime('%Y-%m-%d'),
+            'favorite_team': {
+                'id': profile.favorite_team_id,
+                'name': profile.favorite_team_name,
+                'crest': profile.favorite_team_crest,
+            },
+            'favorite_team_league': profile.favorite_team_league,
+            'favorite_team_country': profile.favorite_team_country,
+            'comment_count': comment_count
+        })
+    except User.DoesNotExist:
+        return Response({"detail": "User not found"}, status=status.HTTP_404_NOT_FOUND)

@@ -1,37 +1,55 @@
-import { useState, useEffect } from 'react';
-import { register, login } from '../services/authService';
-import { useAuth } from '../context/AuthContext';
-import CloseIcon from '@mui/icons-material/Close';
-import { toast } from 'react-toastify';
+import { useState, useEffect, useRef } from "react";
+import { register, login } from "../services/authService";
+import { useAuth } from "../context/AuthContext";
+import CloseIcon from "@mui/icons-material/Close";
+import { toast } from "react-toastify";
 
 function Register({ open, onClose, onSwitchToLogin }) {
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { setUser } = useAuth();
-  
+  const [isClosing, setIsClosing] = useState(false);
+  const closeTimeoutRef = useRef(null);
+
   useEffect(() => {
     if (!open) {
-      setUsername('');
-      setEmail('');
-      setPassword('');
-      setConfirmPassword('');
-      setError('');
+      setUsername("");
+      setEmail("");
+      setPassword("");
+      setConfirmPassword("");
+      setError("");
     }
   }, [open]);
+
+  const handleClose = () => {
+    setIsClosing(true);
+    closeTimeoutRef.current = setTimeout(() => {
+      onClose();
+      setIsClosing(false);
+    }, 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError("Passwords do not match");
       setLoading(false);
-      toast.error('Passwords do not match');
+      toast.error("Passwords do not match");
       return;
     }
 
@@ -40,15 +58,18 @@ function Register({ open, onClose, onSwitchToLogin }) {
       const response = await login(username, password);
       setUser({
         id: response.user_id,
-        username: response.username
+        username: response.username,
       });
-      toast.success(`Welcome to NinetyPlus, ${username}! Your account has been created.`);
-      onClose();
+      toast.success(
+        `Welcome to NinetyPlus, ${username}! Your account has been created.`
+      );
+      handleClose();
     } catch (err) {
-      const errorMessage = err.response?.data?.username?.[0] || 
-                        err.response?.data?.email?.[0] || 
-                        err.response?.data?.password?.[0] || 
-                        'Registration failed';
+      const errorMessage =
+        err.response?.data?.username?.[0] ||
+        err.response?.data?.email?.[0] ||
+        err.response?.data?.password?.[0] ||
+        "Registration failed";
       setError(errorMessage);
       toast.error(`Registration failed: ${errorMessage}`);
     } finally {
@@ -59,23 +80,23 @@ function Register({ open, onClose, onSwitchToLogin }) {
   if (!open) return null;
 
   return (
-    <div 
-      className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 transition-opacity duration-300"
-      style={{
-        opacity: 1,
-        animation: 'fadeIn 0.3s ease-out forwards'
-      }}
+    <div
+      className={`fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 transition-opacity duration-300 ${
+        isClosing ? "opacity-0" : "opacity-100"
+      }`}
+      style={{ animation: isClosing ? "none" : "fadeIn 0.3s ease-out" }}
     >
-      <div 
-        className="bg-dark-200 rounded-xl max-w-md w-full p-6 border border-dark-300 transition-transform duration-300"
-        style={{
-          transform: 'scale(1)',
-          animation: 'scaleIn 0.3s ease-out forwards'
-        }}
+      <div
+        className={`bg-dark-200 rounded-xl max-w-md w-full p-6 border border-dark-300 transition-all duration-300 ${
+          isClosing ? "opacity-0 scale-95" : "opacity-100 scale-100"
+        }`}
+        style={{ animation: isClosing ? "none" : "scaleIn 0.3s ease-out" }}
       >
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-purple-400">Register</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-200 transition-colors">
+          <button
+            onClick={handleClose}
+            className="text-gray-400 hover:text-gray-200 transition-colors">
             <CloseIcon />
           </button>
         </div>
@@ -135,18 +156,16 @@ function Register({ open, onClose, onSwitchToLogin }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors disabled:bg-purple-800 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Registering...' : 'Register'}
+            className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors disabled:bg-purple-800 disabled:cursor-not-allowed">
+            {loading ? "Registering..." : "Register"}
           </button>
         </form>
 
         <div className="mt-4 text-center text-gray-400">
-          Already have an account?{' '}
+          Already have an account?{" "}
           <button
             onClick={onSwitchToLogin}
-            className="text-purple-400 hover:text-purple-300 transition-colors"
-          >
+            className="text-purple-400 hover:text-purple-300 transition-colors">
             Login
           </button>
         </div>

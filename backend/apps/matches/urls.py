@@ -8,4 +8,5 @@ urlpatterns = [
     path('standings/', views.get_standings, name='premier-league-standings'),
     path('match/<int:match_id>/', views.get_match_details, name='match-details'),
     path('fetch-source/', views.fetch_site_source, name='fetch-site-source'),
+    path('team/<int:team_id>/', views.get_team_matches, name='team-matches'),
 ]

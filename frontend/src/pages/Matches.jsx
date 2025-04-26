@@ -1,56 +1,81 @@
-import { useState, useEffect } from "react"
-import { getMatches } from "../services/footballService"
-import { TOP_LEAGUES } from "../config/leagues"
-import MatchDetails from "../components/MatchDetails"
-import AccessTimeIcon from '@mui/icons-material/AccessTime'
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
-import { LEAGUE_ICONS } from '../config/leagueIcons'
-import { formatLeagueName, getStatusColor, getStatusText } from '../utils/matchUtils'
+import { useEffect, useRef, useState } from "react";
+import { getMatches } from "../services/footballService";
+import { TOP_LEAGUES } from "../config/leagues";
+import MatchDetails from "../components/MatchDetails";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import FavoriteIcon from "@mui/icons-material/Favorite";
+import { LEAGUE_ICONS } from "../config/leagueIcons";
+import {
+  formatLeagueName,
+  getStatusColor,
+  getStatusText,
+} from "../utils/matchUtils";
+import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 
-function MatchCard({ match, onClick }) {
+function MatchCard({ match, onClick, isFavorite, favoriteTeam }) {
   return (
     <div
       onClick={() => onClick(match)}
-      className="bg-dark-200 rounded-xl shadow-md hover:shadow-purple-900/30 hover:bg-dark-300 transition-all duration-200 border border-dark-300">
-      <div className="border-b border-dark-400 px-4 py-3">
-        <div className="flex items-center space-x-3">
-          <img 
-            src={LEAGUE_ICONS[match.competition.id]} 
-            alt="" 
-            className="w-6 h-6 object-contain"
-          />
-          <span className="text-lg font-bold text-purple-400">
-            {formatLeagueName(match.competition.name)}
-          </span>
-        </div>
-      </div>
+      className={`bg-dark-200 rounded-xl ${
+        isFavorite ? "rounded-t-none" : ""
+      } shadow-md hover:shadow-purple-900/30 hover:bg-dark-300 transition-all duration-200 border ${
+        isFavorite ? "border-purple-800" : "border-dark-300"
+      }`}>
       <div className="p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 flex-1">
-            <img src={match.homeTeam.crest} alt="" className="w-12 h-12 object-contain" />
-            <span className="text-lg font-medium text-gray-100">
+            <img
+              src={match.homeTeam.crest}
+              alt=""
+              className="w-12 h-12 object-contain"
+            />
+            <span
+              className={`text-lg font-medium ${
+                match.homeTeam.id === favoriteTeam?.favorite_team_id
+                  ? "text-purple-400"
+                  : "text-gray-100"
+              }`}>
               {match.homeTeam.shortName || match.homeTeam.name}
             </span>
           </div>
 
           <div className="flex flex-col items-center">
-            {match.status !== 'TIMED' && (
-              <div className={`absolute -mt-9 px-3 py-1 text-sm rounded-md ${getStatusColor(match.status)}`}>
+            {match.status !== "TIMED" && match.status !== "SCHEDULED" && (
+              <div
+                className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
+                  match.status
+                )}`}>
                 {getStatusText(match.status, match.utcDate)}
               </div>
             )}
-            <div className="text-3xl font-bold text-purple-400 flex items-center">
-              {match.status === 'TIMED' 
+            <div className={`text-4xl mb-1 font-bold text-purple-400 flex items-center ${
+              (match.status === "TIMED" || match.status === "SCHEDULED") && 
+              getStatusText(match.status, match.utcDate).includes(",") 
+                ? "text-xl"
+                : ""
+            }`}>
+              {match.status === "TIMED" || match.status === "SCHEDULED"
                 ? getStatusText(match.status, match.utcDate)
-                : `${match.score.fullTime.home} - ${match.score.fullTime.away}`}
+                : <span className="mb-8">{match.score.fullTime.home} - {match.score.fullTime.away}</span>}
             </div>
           </div>
 
           <div className="flex items-center space-x-4 flex-1 justify-end">
-            <span className="text-lg font-medium text-gray-100">
+            <span
+              className={`text-lg font-medium ${
+                match.awayTeam.id === favoriteTeam?.favorite_team_id
+                  ? "text-purple-400"
+                  : "text-gray-100"
+              }`}>
               {match.awayTeam.shortName || match.awayTeam.name}
             </span>
-            <img src={match.awayTeam.crest} alt="" className="w-12 h-12 object-contain" />
+            <img
+              src={match.awayTeam.crest}
+              alt=""
+              className="w-12 h-12 object-contain"
+            />
           </div>
         </div>
       </div>
@@ -61,57 +86,137 @@ function MatchCard({ match, onClick }) {
 function Matches() {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
   const [selectedMatch, setSelectedMatch] = useState(null);
+  const { favoriteTeam } = useAuth();
+  const prevMatchesRef = useRef(null);
+  const [animateIn, setAnimateIn] = useState(false);
+  const [favoriteTeamMatch, setFavoriteTeamMatch] = useState(null);
+  
+  useEffect(() => {
+    setAnimateIn(true);
+  }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const fetchData = async () => {
+      if (initialLoad) {
+        setLoading(true);
+      }
+      
       try {
-        const data = await getMatches();
-        if (!data || data.length === 0) {
+        const allMatchesData = await getMatches();
+        
+        if (!isMounted) return;
+        
+        if (!allMatchesData || allMatchesData.length === 0) {
           setIsRateLimited(true);
-        } else {
-          setIsRateLimited(false);
+          return;
+        }
+        
+        setIsRateLimited(false);
+        
+        let favoriteTeamMatch = null;
+        if (favoriteTeam && favoriteTeam.favorite_team_id) {
           
-          const premierLeagueMatches = data.filter(match => 
-            match.competition.id === 2021
+          favoriteTeamMatch = allMatchesData.find(
+            (match) =>
+              match.homeTeam.id === favoriteTeam.favorite_team_id ||
+              match.awayTeam.id === favoriteTeam.favorite_team_id
           );
           
-          const laLigaMatches = data.filter(match => 
-            match.competition.id === 2014
-          );
-          
-          const otherLeagueMatches = data.filter(match =>
-            TOP_LEAGUES.some(league => league.id === match.competition.id) &&
-            match.competition.id !== 2021 && 
-            match.competition.id !== 2014
-          );
+          if (!favoriteTeamMatch) {
+            try {
+              const response = await api.get(`/matches/team/${favoriteTeam.favorite_team_id}/`);
+              
+              if (response.data && response.data.matches && response.data.matches.length > 0) {
+                const upcomingMatches = response.data.matches
+                  .filter(match => match.status === "SCHEDULED" || match.status === "TIMED")
+                  .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
+                  
+                if (upcomingMatches.length > 0) {
+                  favoriteTeamMatch = upcomingMatches[0];
+                }
+              }
+            } catch (err) {
+              console.error("Failed to fetch favorite team's upcoming match", err);
+            }
+          }
+        }
+        
+        const matchesByCompetition = {};
+        
+        allMatchesData.forEach(match => {
+          const competitionId = match.competition.id;
+          if (!matchesByCompetition[competitionId]) {
+            matchesByCompetition[competitionId] = [];
+          }
+          matchesByCompetition[competitionId].push(match);
+        });
+        
+        const leagueOrder = [2021, 2014, 2002, 2019, 2015, 2001, 2146];
+        
+        const allProcessedMatches = [];
 
-          const prioritizedMatches = [
-            ...premierLeagueMatches,
-            ...laLigaMatches,
-            ...otherLeagueMatches
-          ].slice(0, 10);
+        if (favoriteTeamMatch) {
+          allProcessedMatches.push(favoriteTeamMatch);
 
-          setMatches(prioritizedMatches);
+          const competitionId = favoriteTeamMatch.competition.id;
+          if (matchesByCompetition[competitionId]) {
+            matchesByCompetition[competitionId] = matchesByCompetition[competitionId].filter(
+              match => match.id !== favoriteTeamMatch.id
+            );
+          }
+        }
+        
+        leagueOrder.forEach(competitionId => {
+          if (matchesByCompetition[competitionId]) {
+            allProcessedMatches.push(...matchesByCompetition[competitionId]);
+          }
+        });
+        
+        Object.keys(matchesByCompetition)
+          .map(Number)
+          .filter(id => !leagueOrder.includes(id))
+          .forEach(competitionId => {
+            allProcessedMatches.push(...matchesByCompetition[competitionId]);
+          });
+        
+        if (JSON.stringify(allProcessedMatches) !== JSON.stringify(prevMatchesRef.current)) {
+          prevMatchesRef.current = allProcessedMatches;
+          setMatches(allProcessedMatches);
+          
+          setFavoriteTeamMatch(favoriteTeamMatch);
         }
       } catch (err) {
+        console.error("Error fetching matches:", err);
+        if (!isMounted) return;
+        
         if (err.response?.status === 429) {
           setIsRateLimited(true);
         } else {
           setError("Failed to load matches");
         }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+          setInitialLoad(false);
+        }
       }
     };
-
+    
     fetchData();
-    const interval = setInterval(fetchData, 60000);
-
-    return () => clearInterval(interval);
-  }, []);
+    
+    const interval = setInterval(fetchData, 180000);
+    
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [favoriteTeam]);
 
   if (loading)
     return (
@@ -146,21 +251,139 @@ function Matches() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="grid gap-4 mb-8">
-        {matches.map((match, index) => (
+
+        {favoriteTeam && favoriteTeamMatch && (
           <div
-            key={match.id}
-            style={{ 
-              animation: `matchCardEnter 0.3s ease-out forwards`,
-              animationDelay: `${index * 0.05}s`,
-              opacity: 0
-            }}
-          >
-            <MatchCard
-              match={match}
-              onClick={() => setSelectedMatch(match)}
-            />
+            className="mb-12"
+            style={{
+              opacity: animateIn ? 1 : 0,
+              transform: animateIn ? "translateY(0)" : "translateY(-10px)",
+              transition: "opacity 0.55s ease 0.1s, transform 0.55s ease 0.1s",
+            }}>
+            <div className="flex items-center bg-purple-900/30 p-2 rounded-t-lg border-t border-l border-r border-purple-800">
+              <FavoriteIcon className="text-purple-400 mr-2" />
+              <span className="text-sm text-purple-400 font-semibold">
+                Your favorite team's match
+              </span>
+            </div>
+            <div 
+              className="bg-dark-200 rounded-b-xl p-4 border border-purple-800 cursor-pointer hover:bg-dark-300 transition-colors"
+              onClick={() => setSelectedMatch(favoriteTeamMatch)}>
+              <div className="border-b border-dark-400 px-4 py-3">
+                <div className="flex items-center space-x-3">
+                  <img
+                    src={LEAGUE_ICONS[favoriteTeamMatch.competition.id] || "/icons/favicon800x800.png"}
+                    alt=""
+                    className="w-6 h-6 object-contain"
+                  />
+                  <span className="text-lg font-bold text-purple-400">
+                    {formatLeagueName(favoriteTeamMatch.competition.name)}
+                  </span>
+                </div>
+              </div>
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4 flex-1">
+                    <img
+                      src={favoriteTeamMatch.homeTeam.crest}
+                      alt=""
+                      className="w-12 h-12 object-contain"
+                    />
+                    <span className={`text-lg font-medium ${
+                      favoriteTeamMatch.homeTeam.id === favoriteTeam.favorite_team_id
+                        ? "text-purple-400"
+                        : "text-gray-100"
+                    }`}>
+                      {favoriteTeamMatch.homeTeam.shortName || favoriteTeamMatch.homeTeam.name}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col items-center">
+                    {favoriteTeamMatch.status !== "TIMED" && favoriteTeamMatch.status !== "SCHEDULED" && (
+                      <div
+                        className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
+                          favoriteTeamMatch.status
+                        )}`}>
+                        {getStatusText(favoriteTeamMatch.status, favoriteTeamMatch.utcDate)}
+                      </div>
+                    )}
+                    <div className="text-3xl font-bold text-purple-400 flex items-center">
+                      {favoriteTeamMatch.status === "TIMED" || favoriteTeamMatch.status === "SCHEDULED"
+                        ? getStatusText(favoriteTeamMatch.status, favoriteTeamMatch.utcDate)
+                        : <span className="mb-8">{favoriteTeamMatch.score.fullTime.home} - {favoriteTeamMatch.score.fullTime.away}</span>}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-4 flex-1 justify-end">
+                    <span
+                      className={`text-lg font-medium ${
+                        favoriteTeamMatch.awayTeam.id === favoriteTeam.favorite_team_id
+                          ? "text-purple-400"
+                          : "text-gray-100"
+                      }`}>
+                      {favoriteTeamMatch.awayTeam.shortName || favoriteTeamMatch.awayTeam.name}
+                    </span>
+                    <img
+                      src={favoriteTeamMatch.awayTeam.crest}
+                      alt=""
+                      className="w-12 h-12 object-contain"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        ))}
+        )}
+
+        <div className="grid grid-cols-1 gap-4">
+          {(() => {
+            let currentCompetition = null; 
+            let elements = [];    
+            matches.forEach((match, index) => {
+              if (favoriteTeamMatch && match.id === favoriteTeamMatch.id) {
+                return;
+              }
+
+              if (!currentCompetition || currentCompetition !== match.competition.id) {
+                currentCompetition = match.competition.id;            
+                elements.push(
+                  <div key={`league-${match.competition.id}`} className="bg-dark-300 rounded-t-lg p-3 mt-20 first:mt-0">
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={LEAGUE_ICONS[match.competition.id]}
+                        alt=""
+                        className="w-6 h-6 object-contain"
+                      />
+                      <span className="font-bold text-gray-200">
+                        {match.competition.country ? `${match.competition.country} - ` : ''}
+                        {formatLeagueName(match.competition.name)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
+              elements.push(
+                <div
+                  key={match.id}
+                  style={{
+                    animation: `matchCardEnter 0.3s ease-out forwards`,
+                    animationDelay: `${index * 0.05}s`,
+                    opacity: 0,
+                  }}>
+                  <MatchCard
+                    match={match}
+                    onClick={() => setSelectedMatch(match)}
+                    isFavorite={false}
+                    favoriteTeam={favoriteTeam}
+                  />
+                </div>
+              );
+            });
+            
+            return elements;
+          })()}
+        </div>
       </div>
       <MatchDetails
         match={selectedMatch}
