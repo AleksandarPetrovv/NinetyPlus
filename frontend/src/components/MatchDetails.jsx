@@ -50,6 +50,8 @@ function MatchDetails({ match, isOpen, onClose }) {
   const [showRegister, setShowRegister] = useState(false);
   const [selectedUsername, setSelectedUsername] = useState(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [homeTeamEvents, setHomeTeamEvents] = useState([]);
+  const [awayTeamEvents, setAwayTeamEvents] = useState([]);
   
   const [isClosing, setIsClosing] = useState(false);
   const closeTimeoutRef = useRef(null);
@@ -80,14 +82,180 @@ function MatchDetails({ match, isOpen, onClose }) {
     setShowLogin(true);
   };
 
+  const extractGoalscorers = (html) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    const goalscorers = [];
+    
+    const competitors = doc.querySelectorAll('.SoccerPerformers__Competitor');
+    
+    competitors.forEach(competitor => {
+      const teamNameEl = competitor.querySelector('.SoccerPerformers__Competitor__Team__Name');
+      if (!teamNameEl) return;
+      
+      const teamName = teamNameEl.textContent.trim();
+      
+      const noGoals = competitor.querySelector('.SoccerPerformers__Competitor__Info__GoalsList--noGoals');
+      if (noGoals) {
+        return;
+      }
+      
+      const goalItems = competitor.querySelectorAll('.SoccerPerformers__Competitor__Info__GoalsList__Item');
+      
+      goalItems.forEach(item => {
+        const playerEl = item.querySelector('.Soccer__PlayerName');
+        const timeEl = item.querySelector('.GoalScore__Time');
+        
+        if (playerEl && timeEl) {
+          const playerName = playerEl.textContent.trim();
+          const time = timeEl.textContent.trim().replace(' - ', '');
+          
+          goalscorers.push({
+            player: playerName,
+            team: teamName,
+            time: time
+          });
+          
+          console.log(`Goal by ${playerName} (${teamName}) at ${time}`);
+        }
+      });
+    });
+    
+    return goalscorers;
+  };
+
   useEffect(() => {
     const fetchDetails = async () => {
       if (!match) return;
       setLoading(true);
+
+      setHomeTeamEvents([]);
+      setAwayTeamEvents([]);
+      
       try {
         const data = await getMatchDetails(match.id);
         setDetails(data);
         setError(null);
+
+        const homeEvents = [];
+        const awayEvents = [];
+
+        try {
+          const response = await api.get('/matches/fetch-source/', {
+            params: { url: 'https://www.espn.com/soccer/scoreboard' }
+          });
+          
+          if (response.data && response.data.source) {
+            const homeTeam = match.homeTeam.name;
+            const awayTeam = match.awayTeam.name;
+            
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(response.data.source, 'text/html');
+
+            const cardSections = doc.querySelectorAll('section.Card.gameModules');
+            
+            cardSections.forEach(card => {
+              const header = card.querySelector('header.Card__Header');
+              if (!header) return;
+              
+              const leagueLabel = header.getAttribute('aria-label');
+              if (!leagueLabel) return;
+
+              const top5Leagues = [
+                'English Premier League',
+                'Spanish LALIGA',
+                'German Bundesliga',
+                'Italian Serie A',
+                'French Ligue 1',
+                'UEFA Champions League',
+                'UEFA Europa League'
+              ];
+              
+              if (!top5Leagues.some(league => leagueLabel.includes(league))) {
+                return;
+              }
+
+              const teams = card.querySelectorAll('.SoccerPerformers__Competitor__Team__Name');
+              
+              for (let i = 0; i < teams.length; i++) {
+                const teamName = teams[i].textContent.trim();
+
+                if (teamName.includes(homeTeam) || homeTeam.includes(teamName) || 
+                    teamName.includes(awayTeam) || awayTeam.includes(teamName)) {
+
+                  const competitorSection = teams[i].closest('.SoccerPerformers__Competitor');
+                  if (!competitorSection) continue;
+
+                  const isHomeTeam = teamName.includes(homeTeam) || homeTeam.includes(teamName);
+                  const eventsArray = isHomeTeam ? homeEvents : awayEvents;
+
+                  const goalInfos = competitorSection.querySelectorAll('.SoccerPerformers__Competitor__Info');
+                  
+                  goalInfos.forEach(infoSection => {
+                    const isRedCard = infoSection.querySelector('.SoccerPerformers__RedCardIcon');
+                    
+                    if (isRedCard) {
+                      const redCardItems = infoSection.querySelectorAll('.SoccerPerformers__Competitor__Info__GoalsList__Item');
+                      redCardItems.forEach(item => {
+                        const playerEl = item.querySelector('.Soccer__PlayerName');
+                        const timeEl = item.querySelector('.GoalScore__Time');
+                        
+                        if (playerEl && timeEl) {
+                          const playerName = playerEl.textContent.trim();
+                          const time = timeEl.textContent.trim().replace(' - ', '');
+                          
+                          eventsArray.push({
+                            type: 'red',
+                            player: playerName,
+                            time: time
+                          });
+                        }
+                      });
+                    } else if (infoSection.querySelector('.SoccerPerformers__GoalIcon')) {
+                      const noGoals = infoSection.querySelector('.SoccerPerformers__Competitor__Info__GoalsList--noGoals');
+                      if (noGoals) {
+                        return;
+                      }
+
+                      const goalItems = infoSection.querySelectorAll('.SoccerPerformers__Competitor__Info__GoalsList__Item');
+                      
+                      goalItems.forEach(item => {
+                        const playerEl = item.querySelector('.Soccer__PlayerName');
+                        const timeEl = item.querySelector('.GoalScore__Time');
+                        
+                        if (playerEl && timeEl) {
+                          const playerName = playerEl.textContent.trim();
+                          const time = timeEl.textContent.trim().replace(' - ', '');
+                          
+                          if (time.includes('OG')) {
+                            eventsArray.push({
+                              type: 'own',
+                              player: playerName,
+                              time: time.replace('OG', '').trim()
+                            });
+                          } else {
+                            eventsArray.push({
+                              type: 'goal',
+                              player: playerName,
+                              time: time
+                            });
+                          }
+                        }
+                      });
+                    }
+                  });
+                }
+              }
+            });
+
+            setHomeTeamEvents(homeEvents);
+            setAwayTeamEvents(awayEvents);
+          }
+        } catch (espnError) {
+          console.error('Error fetching ESPN data:', espnError);
+        }
+        
       } catch (err) {
         setError("Failed to load match details");
       } finally {
@@ -296,7 +464,7 @@ function MatchDetails({ match, isOpen, onClose }) {
           isClosing ? "opacity-0 scale-95" : "opacity-100 scale-100"
         }`}>
         <div
-          className={`bg-dark-200 rounded-xl ${
+          className={`bg-dark-200 rounded-xl${
             isFullscreen ? "w-screen h-screen fixed inset-0" : ""
           } p-6 max-h-[90vh] overflow-y-auto border border-dark-300`}
           style={{ animation: isClosing ? "none" : "scaleIn 0.3s ease-out" }}
@@ -409,16 +577,43 @@ function MatchDetails({ match, isOpen, onClose }) {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center justify-between mb-8 relative pb-40">
                       <div className="flex-1 flex flex-col items-center">
                         <img
                           src={match.homeTeam.crest}
                           alt=""
                           className="w-20 h-20 object-contain mb-3"
                         />
-                        <div className="font-medium text-lg text-center">
+                        <div className="font-medium text-lg text-center mb-2">
                           {match.homeTeam.name}
                         </div>
+                        {loading ? (
+                          <div className="w-full flex justify-center my-4">
+                            <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        ) : homeTeamEvents.length > 0 && (
+                          <div className="absolute w-1/3 text-sm" style={{ top: '130px', left: '8.33%', transform: 'translateX(-20%)' }}>
+                            {homeTeamEvents.map((event, idx) => (
+                              <div key={idx} className="text-gray-300 flex items-center justify-center mb-1">
+                                <span>
+                                  {event.player} {event.time}
+                                  {event.type === 'own' && ' (OG)'}
+                                </span>
+                                {event.type === 'goal' && (
+                                  <img src="/icons/goal.png" alt="Goal" className="w-4 h-4 ml-2" />
+                                )}
+                                {event.type === 'own' && (
+                                  <img src="/icons/owngoal.png" alt="Own Goal" className="w-6 h-6 ml-2" />
+                                )}
+                                {event.type === 'red' && (
+                                  <svg width="12" height="16" viewBox="0 0 10 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-2 mt-1.5">
+                                    <path d="M6.81836 0.605469H3.182C2.42888 0.605469 1.81836 1.21599 1.81836 1.96911V8.02956C1.81836 8.78268 2.42888 9.3932 3.182 9.3932H6.81836C7.57148 9.3932 8.182 8.78268 8.182 8.02956V1.96911C8.182 1.21599 7.57148 0.605469 6.81836 0.605469Z" fill="#DD3636" />
+                                  </svg>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       
                       <div className="text-6xl font-bold text-purple-400 mx-6 -translate-y-6">
@@ -431,9 +626,36 @@ function MatchDetails({ match, isOpen, onClose }) {
                           alt=""
                           className="w-20 h-20 object-contain mb-3"
                         />
-                        <div className="font-medium text-lg text-center">
+                        <div className="font-medium text-lg text-center mb-2">
                           {match.awayTeam.name}
                         </div>
+                        {loading ? (
+                          <div className="w-full flex justify-center my-4">
+                            <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        ) : awayTeamEvents.length > 0 && (
+                          <div className="absolute w-1/3 text-sm" style={{ top: '130px', right: '8.33%', transform: 'translateX(20%)' }}>
+                            {awayTeamEvents.map((event, idx) => (
+                              <div key={idx} className="text-gray-300 flex items-center justify-center mb-1">
+                                <span>
+                                  {event.player} {event.time}
+                                  {event.type === 'own' && ' (OG)'}
+                                </span>
+                                {event.type === 'goal' && (
+                                  <img src="/icons/goal.png" alt="Goal" className="w-4 h-4 ml-2" />
+                                )}
+                                {event.type === 'own' && (
+                                  <img src="/icons/owngoal.png" alt="Own Goal" className="w-6 h-6 ml-2" />
+                                )}
+                                {event.type === 'red' && (
+                                  <svg width="12" height="16" viewBox="0 0 10 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-2 mt-1.5">
+                                    <path d="M6.81836 0.605469H3.182C2.42888 0.605469 1.81836 1.21599 1.81836 1.96911V8.02956C1.81836 8.78268 2.42888 9.3932 3.182 9.3932H6.81836C7.57148 9.3932 8.182 8.78268 8.182 8.02956V1.96911C8.182 1.21599 7.57148 0.605469 6.81836 0.605469Z" fill="#DD3636" />
+                                  </svg>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
