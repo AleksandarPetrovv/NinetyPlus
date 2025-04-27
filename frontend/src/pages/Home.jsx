@@ -160,25 +160,25 @@ function Home() {
             </div>
             <div className="p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4 flex-1">
-                  <img
-                    src={favoriteTeamMatch.homeTeam.crest}
-                    alt=""
-                    className="w-12 h-12 object-contain"
-                  />
-                  <span className={`text-lg font-medium ${
+                <div className="flex items-center flex-1 justify-end mr-8">
+                  <span className={`text-lg font-bold ${
                     favoriteTeamMatch.homeTeam.id === favoriteTeam.favorite_team_id
                       ? "text-purple-400"
                       : "text-gray-100"
                   }`}>
                     {favoriteTeamMatch.homeTeam.shortName || favoriteTeamMatch.homeTeam.name}
                   </span>
+                  <img
+                    src={favoriteTeamMatch.homeTeam.crest}
+                    alt=""
+                    className="w-12 h-12 object-contain ml-4"
+                  />
                 </div>
 
                 <div className="flex flex-col items-center">
                   {favoriteTeamMatch.status !== "TIMED" && favoriteTeamMatch.status !== "SCHEDULED" && (
                     <div
-                      className={`absolute -mt-9 px-3 py-1 text-sm rounded-md ${getStatusColor(
+                      className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
                         favoriteTeamMatch.status
                       )}`}>
                       {getStatusText(favoriteTeamMatch.status, favoriteTeamMatch.utcDate)}
@@ -191,19 +191,19 @@ function Home() {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-4 flex-1 justify-end">
-                  <span className={`text-lg font-medium ${
+                <div className="flex items-center flex-1 justify-start ml-8">
+                  <img
+                    src={favoriteTeamMatch.awayTeam.crest}
+                    alt=""
+                    className="w-12 h-12 object-contain mr-4"
+                  />
+                  <span className={`text-lg font-bold ${
                     favoriteTeamMatch.awayTeam.id === favoriteTeam.favorite_team_id
                       ? "text-purple-400"
                       : "text-gray-100"
                   }`}>
                     {favoriteTeamMatch.awayTeam.shortName || favoriteTeamMatch.awayTeam.name}
                   </span>
-                  <img
-                    src={favoriteTeamMatch.awayTeam.crest}
-                    alt=""
-                    className="w-12 h-12 object-contain"
-                  />
                 </div>
               </div>
             </div>
@@ -254,25 +254,25 @@ function Home() {
                 </div>
                 <div className="p-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4 flex-1">
-                      <img
-                        src={match.homeTeam.crest}
-                        alt=""
-                        className="w-12 h-12 object-contain"
-                      />
-                      <span className={`text-lg font-medium ${
+                    <div className="flex items-center flex-1 justify-end mr-8">
+                      <span className={`text-lg font-bold ${
                         match.homeTeam.id === favoriteTeam?.favorite_team_id
                           ? "text-purple-400"
                           : "text-gray-100"
                       }`}>
                         {match.homeTeam.shortName || match.homeTeam.name}
                       </span>
+                      <img
+                        src={match.homeTeam.crest}
+                        alt=""
+                        className="w-12 h-12 object-contain ml-4"
+                      />
                     </div>
 
                     <div className="flex flex-col items-center">
                       {match.status !== "TIMED" && (
                         <div
-                          className={`absolute -mt-9 px-3 py-1 text-sm rounded-md ${getStatusColor(
+                          className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
                             match.status
                           )}`}>
                           {getStatusText(match.status, match.utcDate)}
@@ -285,19 +285,19 @@ function Home() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-4 flex-1 justify-end">
-                      <span className={`text-lg font-medium ${
+                    <div className="flex items-center flex-1 justify-start ml-8">
+                      <img
+                        src={match.awayTeam.crest}
+                        alt=""
+                        className="w-12 h-12 object-contain mr-4"
+                      />
+                      <span className={`text-lg font-bold ${
                         match.awayTeam.id === favoriteTeam?.favorite_team_id
                           ? "text-purple-400"
                           : "text-gray-100"
                       }`}>
                         {match.awayTeam.shortName || match.awayTeam.name}
                       </span>
-                      <img
-                        src={match.awayTeam.crest}
-                        alt=""
-                        className="w-12 h-12 object-contain"
-                      />
                     </div>
                   </div>
                 </div>

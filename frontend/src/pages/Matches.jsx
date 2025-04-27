@@ -25,20 +25,20 @@ function MatchCard({ match, onClick, isFavorite, favoriteTeam }) {
       }`}>
       <div className="p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4 flex-1">
-            <img
-              src={match.homeTeam.crest}
-              alt=""
-              className="w-12 h-12 object-contain"
-            />
+          <div className="flex items-center flex-1 justify-end mr-8">
             <span
-              className={`text-lg font-medium ${
+              className={`text-lg font-bold ${
                 match.homeTeam.id === favoriteTeam?.favorite_team_id
                   ? "text-purple-400"
                   : "text-gray-100"
               }`}>
               {match.homeTeam.shortName || match.homeTeam.name}
             </span>
+            <img
+              src={match.homeTeam.crest}
+              alt=""
+              className="w-12 h-12 object-contain ml-4"
+            />
           </div>
 
           <div className="flex flex-col items-center">
@@ -50,7 +50,7 @@ function MatchCard({ match, onClick, isFavorite, favoriteTeam }) {
                 {getStatusText(match.status, match.utcDate)}
               </div>
             )}
-            <div className={`text-4xl mb-1 font-bold text-purple-400 flex items-center ${
+            <div className={`text-3xl font-bold text-purple-400 flex items-center ${
               (match.status === "TIMED" || match.status === "SCHEDULED") && 
               getStatusText(match.status, match.utcDate).includes(",") 
                 ? "text-xl"
@@ -62,20 +62,20 @@ function MatchCard({ match, onClick, isFavorite, favoriteTeam }) {
             </div>
           </div>
 
-          <div className="flex items-center space-x-4 flex-1 justify-end">
+          <div className="flex items-center flex-1 justify-start ml-8">
+            <img
+              src={match.awayTeam.crest}
+              alt=""
+              className="w-12 h-12 object-contain mr-4"
+            />
             <span
-              className={`text-lg font-medium ${
+              className={`text-lg font-bold ${
                 match.awayTeam.id === favoriteTeam?.favorite_team_id
                   ? "text-purple-400"
                   : "text-gray-100"
               }`}>
               {match.awayTeam.shortName || match.awayTeam.name}
             </span>
-            <img
-              src={match.awayTeam.crest}
-              alt=""
-              className="w-12 h-12 object-contain"
-            />
           </div>
         </div>
       </div>
@@ -254,7 +254,7 @@ function Matches() {
 
         {favoriteTeam && favoriteTeamMatch && (
           <div
-            className="mb-12"
+            className="mb-16"
             style={{
               opacity: animateIn ? 1 : 0,
               transform: animateIn ? "translateY(0)" : "translateY(-10px)",
@@ -283,19 +283,19 @@ function Matches() {
               </div>
               <div className="p-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4 flex-1">
-                    <img
-                      src={favoriteTeamMatch.homeTeam.crest}
-                      alt=""
-                      className="w-12 h-12 object-contain"
-                    />
-                    <span className={`text-lg font-medium ${
+                  <div className="flex items-center flex-1 justify-end mr-8">
+                    <span className={`text-lg font-bold ${
                       favoriteTeamMatch.homeTeam.id === favoriteTeam.favorite_team_id
                         ? "text-purple-400"
                         : "text-gray-100"
                     }`}>
                       {favoriteTeamMatch.homeTeam.shortName || favoriteTeamMatch.homeTeam.name}
                     </span>
+                    <img
+                      src={favoriteTeamMatch.homeTeam.crest}
+                      alt=""
+                      className="w-12 h-12 object-contain ml-4"
+                    />
                   </div>
 
                   <div className="flex flex-col items-center">
@@ -314,20 +314,19 @@ function Matches() {
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-4 flex-1 justify-end">
-                    <span
-                      className={`text-lg font-medium ${
-                        favoriteTeamMatch.awayTeam.id === favoriteTeam.favorite_team_id
-                          ? "text-purple-400"
-                          : "text-gray-100"
-                      }`}>
-                      {favoriteTeamMatch.awayTeam.shortName || favoriteTeamMatch.awayTeam.name}
-                    </span>
+                  <div className="flex items-center flex-1 justify-start ml-8">
                     <img
                       src={favoriteTeamMatch.awayTeam.crest}
                       alt=""
-                      className="w-12 h-12 object-contain"
+                      className="w-12 h-12 object-contain mr-4"
                     />
+                    <span className={`text-lg font-bold ${
+                      favoriteTeamMatch.awayTeam.id === favoriteTeam.favorite_team_id
+                        ? "text-purple-400"
+                        : "text-gray-100"
+                    }`}>
+                      {favoriteTeamMatch.awayTeam.shortName || favoriteTeamMatch.awayTeam.name}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -347,7 +346,7 @@ function Matches() {
               if (!currentCompetition || currentCompetition !== match.competition.id) {
                 currentCompetition = match.competition.id;            
                 elements.push(
-                  <div key={`league-${match.competition.id}`} className="bg-dark-300 rounded-t-lg p-3 mt-20 first:mt-0">
+                  <div key={`league-${match.competition.id}`} className="bg-dark-300 rounded-t-lg p-3 mt-8 first:mt-0">
                     <div className="flex items-center space-x-3">
                       <img
                         src={LEAGUE_ICONS[match.competition.id]}

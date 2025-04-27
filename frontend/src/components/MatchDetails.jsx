@@ -29,6 +29,12 @@ const formatBulgarianTime = (utcDate) => {
   })}`;
 };
 
+const isMatchTimeStarted = (utcDate) => {
+  const matchTime = new Date(utcDate);
+  const now = new Date();
+  return now >= matchTime;
+};
+
 function MatchDetails({ match, isOpen, onClose }) {
   const { isAuthenticated, user, logout } = useAuth();
   const [details, setDetails] = useState(null);
@@ -123,8 +129,8 @@ function MatchDetails({ match, isOpen, onClose }) {
         if (tables.length > 0) {
           const homeTeam = match.homeTeam.shortName || match.homeTeam.name;
           const awayTeam = match.awayTeam.shortName || match.awayTeam.name;
-
-          const matchTime = new Date(match.utcDate);
+          
+                    const matchTime = new Date(match.utcDate);
           const adjustedTime = new Date(matchTime);
           adjustedTime.setHours(adjustedTime.getHours() - 1);
           const timeToFind = adjustedTime.toLocaleTimeString("en-GB", {
@@ -173,9 +179,25 @@ function MatchDetails({ match, isOpen, onClose }) {
               }
             }
           }
+          
+          if (!streamId) {
+            toast.info(`Stream not available for ${homeTeam} vs ${awayTeam}`, {
+              icon: "🎬"
+            });
+          }
+        } else {
+          toast.info("No match streams available at this time", {
+            icon: "📺"
+          });
         }
+      } else {
+        toast.info("Stream source unavailable", {
+          icon: "⚠️"
+        });
       }
     } catch (err) {
+      console.error("Error fetching stream source:", err);
+      toast.error("Failed to load match stream");
     } finally {
       setFetchingSource(false);
     }
@@ -315,7 +337,10 @@ function MatchDetails({ match, isOpen, onClose }) {
                       src={streamUrl}
                       title={`${match.homeTeam.name} vs ${match.awayTeam.name}`}
                       className="w-full h-full border-0"
-                      allowFullScreen></iframe>
+                      allowFullScreen
+                      sandbox="allow-scripts allow-same-origin"
+                      referrerPolicy="no-referrer"
+                    ></iframe>
                   </div>
                 </div>
               ) : (
@@ -345,23 +370,24 @@ function MatchDetails({ match, isOpen, onClose }) {
 
                     <div className="flex justify-center mb-6">
                       <a
-                        href="#"
+                        href={streamUrl ? "#" : "#"}
                         onClick={(e) => {
-                          if (match.status === "IN_PLAY" || match.status === "PAUSED") {
+                          e.preventDefault();
+                          if ((isMatchTimeStarted(match.utcDate) || match.status === "IN_PLAY" || match.status === "PAUSED")
+                              && match.status !== "FINISHED") {
                             handleWatchButtonClick(e);
-                          } else {
-                            e.preventDefault();
-                            return false;
                           }
+                          return false;
                         }}
                         className={`flex items-center px-4 py-2 rounded-lg transition-colors duration-200 text-sm
-        ${
-          match.status === "IN_PLAY" || match.status === "PAUSED"
-            ? "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
-            : match.status === "FINISHED"
-            ? "bg-dark-400 text-gray-400 cursor-not-allowed pointer-events-none"
-            : "bg-dark-300 text-gray-400 cursor-not-allowed pointer-events-none"
-        }`}>
+                        ${
+                          (isMatchTimeStarted(match.utcDate) || match.status === "IN_PLAY" || match.status === "PAUSED")
+                            && match.status !== "FINISHED"
+                            ? "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                            : match.status === "FINISHED"
+                            ? "bg-dark-400 text-gray-400 cursor-not-allowed pointer-events-none"
+                            : "bg-dark-300 text-gray-400 cursor-not-allowed pointer-events-none"
+                        }`}>
                         <PlayArrowIcon className="w-4 h-4 mr-2" />
                         <span>
                           {fetchingSource
@@ -370,7 +396,9 @@ function MatchDetails({ match, isOpen, onClose }) {
                             ? "Watch Live"
                             : match.status === "FINISHED"
                             ? "Match has ended"
-                            : `${formatMatchDateTime(match.utcDate)}`}
+                            : isMatchTimeStarted(match.utcDate)
+                            ? "Watch Live"
+                            : `Watch at ${formatMatchDateTime(match.utcDate)}`}
                         </span>
                       </a>
                     </div>
