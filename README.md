@@ -171,7 +171,8 @@ npm install
 ```
 
 - #### Create .env file
-```dotenvVITE_API_URL=http://localhost:8000/api
+```dotenv
+VITE_API_URL=http://localhost:8000/api
 ```
 
 - #### Start vite server
