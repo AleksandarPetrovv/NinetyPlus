@@ -470,9 +470,9 @@ function MatchDetails({ match, isOpen, onClose }) {
     <>
       <div
         className={`fixed top-0 left-0 right-0 bottom-0 w-full h-full z-50 bg-black/60 transition-opacity duration-300 ${
-        isClosing ? "opacity-0" : "opacity-100"
+          isClosing ? "opacity-0" : "opacity-100"
         }`}
-        style={{ animation: isClosing ? "none" : "fadeIn 0.3s ease-out" }}
+        style={{ animation: isClosing ? "none" : "fadeIn 0.3s ease-out forwards" }}
         onClick={handleClose}
       />
       

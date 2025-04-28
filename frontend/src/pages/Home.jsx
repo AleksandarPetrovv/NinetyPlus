@@ -30,7 +30,8 @@ function Home() {
   const [animateIn, setAnimateIn] = useState(false);
 
   useEffect(() => {
-    setAnimateIn(true);
+    const timer = setTimeout(() => setAnimateIn(true), 50);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {

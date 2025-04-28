@@ -32,21 +32,24 @@ function Profile() {
   const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
-    setAnimateIn(true);
+    const timer = setTimeout(() => setAnimateIn(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
-    const fetchUserComments = async () => {
-      if (!isAuthenticated) return;
+  const fetchUserComments = async () => {
+    if (!isAuthenticated) return;
 
-      try {
-        const response = await api.get("/comments/user/");
-        setUserComments(response.data);
-      } catch (err) {
-        setError("Failed to load your comments");
-      } finally {
-        setLoading(false);
-      }
-    };
+    try {
+      const response = await api.get("/comments/user/");
+      setUserComments(response.data);
+    } catch (err) {
+      setError("Failed to load your comments");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchUserComments();
   }, [isAuthenticated]);
 
