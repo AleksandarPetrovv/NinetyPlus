@@ -116,8 +116,6 @@ function MatchDetails({ match, isOpen, onClose }) {
             team: teamName,
             time: time
           });
-          
-          console.log(`Goal by ${playerName} (${teamName}) at ${time}`);
         }
       });
     });
@@ -296,90 +294,31 @@ function MatchDetails({ match, isOpen, onClose }) {
     if (!match) return;
 
     setFetchingSource(true);
-    const targetUrl = "https://techcabal.net/schedule/soccerstreams/";
 
     try {
-      const response = await api.get(`/matches/fetch-source/`, {
-        params: { url: targetUrl },
+      const matchDate = new Date(match.utcDate);
+      matchDate.setHours(matchDate.getHours() + 2);
+      const adjustedMatchDate = matchDate.toISOString();
+
+      const response = await api.get(`/matches/stream-embed/`, {
+        params: {
+          home_team: match.homeTeam.shortName || match.homeTeam.name,
+          away_team: match.awayTeam.shortName || match.awayTeam.name,
+          match_date: adjustedMatchDate
+        },
       });
 
-      if (response.data && response.data.source) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(response.data.source, "text/html");
-
-        const tables = doc.querySelectorAll("table");
-
-        if (tables.length > 0) {
-          const homeTeam = match.homeTeam.shortName || match.homeTeam.name;
-          const awayTeam = match.awayTeam.shortName || match.awayTeam.name;
-          
-                    const matchTime = new Date(match.utcDate);
-          const adjustedTime = new Date(matchTime);
-          adjustedTime.setHours(adjustedTime.getHours() - 1);
-          const timeToFind = adjustedTime.toLocaleTimeString("en-GB", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          });
-
-          let streamId = null;
-          const rows = tables[0].querySelectorAll("tr");
-
-          for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            const cells = row.querySelectorAll("td");
-
-            if (cells.length >= 3) {
-              const timeCell = cells[1];
-              const matchCell = cells[2];
-              const matchLink = matchCell.querySelector("a");
-
-              if (timeCell && matchCell && matchLink) {
-                const timeCellText = timeCell.textContent.trim();
-                const matchCellText = matchCell.textContent
-                  .toLowerCase()
-                  .trim();
-                const homeTeamLower = homeTeam.toLowerCase();
-                const awayTeamLower = awayTeam.toLowerCase();
-
-                if (
-                  timeCellText === timeToFind &&
-                  matchCellText.includes(homeTeamLower.substring(0, 3)) &&
-                  matchCellText.includes(awayTeamLower.substring(0, 3))
-                ) {
-                  const url = matchLink.getAttribute("href");
-                  const matchUrl = url.match(/\/2025\/s(\d+)\//);
-                  if (matchUrl && matchUrl[1]) {
-                    streamId = matchUrl[1];
-                    if (streamId) {
-                      setStreamUrl(
-                        `https://techcabal.net/clip/s${streamId}.html`
-                      );
-                    }
-                  }
-                  break;
-                }
-              }
-            }
-          }
-          
-          if (!streamId) {
-            toast.info(`Stream not available for ${homeTeam} vs ${awayTeam}`, {
-              icon: "🎬"
-            });
-          }
-        } else {
-          toast.info("No match streams available at this time", {
-            icon: "📺"
-          });
-        }
+      if (response.data && response.data.stream_url) {
+        setStreamUrl(response.data.stream_url);
       } else {
-        toast.info("Stream source unavailable", {
-          icon: "⚠️"
+        const homeTeam = match.homeTeam.shortName || match.homeTeam.name;
+        const awayTeam = match.awayTeam.shortName || match.awayTeam.name;
+        toast.info(`Stream not available for ${homeTeam} vs ${awayTeam}`, {
+          icon: "🎬"
         });
       }
     } catch (err) {
-      console.error("Error fetching stream source:", err);
+      console.error("Error fetching stream:", err);
       toast.error("Failed to load match stream");
     } finally {
       setFetchingSource(false);
@@ -594,83 +533,156 @@ function MatchDetails({ match, isOpen, onClose }) {
 
                       <div className="flex justify-center mb-6">
                         <div className={`px-3 py-1 text-sm rounded-md ${getStatusColor(match.status)}`}>
-                          {match.status === "FINISHED" ? "FT" : getStatusText(match.status, match.utcDate)}
+                          {match.matchStatus ? match.matchStatus : match.status === "FINISHED" ? "FT" : getStatusText(match.status, match.utcDate)}
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between mb-8 relative pb-40">
-                        <div className="flex-1 flex flex-col items-center">
-                          <img
-                            src={match.homeTeam.crest}
-                            alt=""
-                            className="w-20 h-20 object-contain mb-3"
-                          />
-                          <div className="font-medium text-lg text-center mb-2">
-                            {match.homeTeam.name}
-                          </div>
-                          {homeTeamEvents.length > 0 && (
-                            <div className="absolute w-1/3 text-sm" style={{ top: '150px', left: '16.67%', transform: 'translateX(-43%)' }}>
-                              {homeTeamEvents.map((event, idx) => (
-                                <div key={idx} className="text-gray-300 flex items-center justify-center mb-1">
-                                  <span>
-                                    {event.player} {event.time}
-                                    {event.type === 'own' && ' (OG)'}
-                                  </span>
-                                  {event.type === 'goal' && (
-                                    <img src="/icons/goal.png" alt="Goal" className="w-4 h-4 ml-2" />
-                                  )}
-                                  {event.type === 'own' && (
-                                    <img src="/icons/owngoal.png" alt="Own Goal" className="w-6 h-6 ml-2" />
-                                  )}
-                                  {event.type === 'red' && (
-                                    <svg width="12" height="16" viewBox="0 0 10 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-2 mt-1.5">
-                                      <path d="M6.81836 0.605469H3.182C2.42888 0.605469 1.81836 1.21599 1.81836 1.96911V8.02956C1.81836 8.78268 2.42888 9.3932 3.182 9.3932H6.81836C7.57148 9.3932 8.182 8.78268 8.182 8.02956V1.96911C8.182 1.21599 7.57148 0.605469 6.81836 0.605469Z" fill="#DD3636" />
-                                    </svg>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
+                      {(() => {
+                        const maxEvents = Math.max(homeTeamEvents.length, awayTeamEvents.length);
+                        const baseHeight = 20;
+                        const eventHeight = 5;
+                        const dynamicPadding = maxEvents > 0 ? baseHeight + (maxEvents * eventHeight) : baseHeight;
+
+                        let homeScore = 0;
+                        let awayScore = 0;
+
+                        homeTeamEvents.forEach(event => {
+                          if (event.type === 'goal') {
+                            homeScore += 1;
+
+                            const commas = (event.time.match(/,/g) || []).length;
+                            if (commas > 0) {
+                              homeScore += commas;
+                            }
+                          }
+                        });
+
+                        awayTeamEvents.forEach(event => {
+                          if (event.type === 'goal') {
+                            awayScore += 1;
+
+                            const commas = (event.time.match(/,/g) || []).length;
+                            if (commas > 0) {
+                              awayScore += commas;
+                            }
+                          }
+                        });
+
+                        homeTeamEvents.forEach(event => {
+                          if (event.type === 'own') {
+                            awayScore += 1;
+                            const commas = (event.time.match(/,/g) || []).length;
+                            if (commas > 0) {
+                              awayScore += commas;
+                            }
+                          }
+                        });
                         
-                        <div className="text-6xl font-bold text-purple-400 mx-6 -translate-y-6">
-                          {match.score?.fullTime?.home ?? 0} - {match.score?.fullTime?.away ?? 0}
-                        </div>
+                        awayTeamEvents.forEach(event => {
+                          if (event.type === 'own') {
+                            homeScore += 1;
+
+                            const commas = (event.time.match(/,/g) || []).length;
+                            if (commas > 0) {
+                              homeScore += commas;
+                            }
+                          }
+                        });
+
+                        const displayHomeScore = (homeTeamEvents.length > 0 || awayTeamEvents.length > 0) 
+                          ? homeScore 
+                          : (match.score?.fullTime?.home ?? 0);
+                          
+                        const displayAwayScore = (homeTeamEvents.length > 0 || awayTeamEvents.length > 0) 
+                          ? awayScore 
+                          : (match.score?.fullTime?.away ?? 0);
                         
-                        <div className="flex-1 flex flex-col items-center">
-                          <img
-                            src={match.awayTeam.crest}
-                            alt=""
-                            className="w-20 h-20 object-contain mb-3"
-                          />
-                          <div className="font-medium text-lg text-center mb-2">
-                            {match.awayTeam.name}
-                          </div>
-                          {awayTeamEvents.length > 0 && (
-                            <div className="absolute w-1/3 text-sm" style={{ top: '150px', right: '16.67%', transform: 'translateX(46%)' }}>
-                              {awayTeamEvents.map((event, idx) => (
-                                <div key={idx} className="text-gray-300 flex items-center justify-center mb-1">
-                                  <span>
-                                    {event.player} {event.time}
-                                    {event.type === 'own' && ' (OG)'}
-                                  </span>
-                                  {event.type === 'goal' && (
-                                    <img src="/icons/goal.png" alt="Goal" className="w-4 h-4 ml-2" />
-                                  )}
-                                  {event.type === 'own' && (
-                                    <img src="/icons/owngoal.png" alt="Own Goal" className="w-6 h-6 ml-2" />
-                                  )}
-                                  {event.type === 'red' && (
-                                    <svg width="12" height="16" viewBox="0 0 10 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-2 mt-1.5">
-                                      <path d="M6.81836 0.605469H3.182C2.42888 0.605469 1.81836 1.21599 1.81836 1.96911V8.02956C1.81836 8.78268 2.42888 9.3932 3.182 9.3932H6.81836C7.57148 9.3932 8.182 8.78268 8.182 8.02956V1.96911C8.182 1.21599 7.57148 0.605469 6.81836 0.605469Z" fill="#DD3636" />
-                                    </svg>
-                                  )}
+                        return (
+                          <div className="flex items-center justify-between mb-8 relative" style={{ paddingBottom: `${dynamicPadding}px` }}>
+                            <div className="flex-1 flex flex-col items-center">
+                              <img
+                                src={match.homeTeam.crest}
+                                alt=""
+                                className="w-20 h-20 object-contain mb-3"
+                              />
+                              <div className="font-medium text-lg text-center mb-2">
+                                {match.homeTeam.name}
+                              </div>
+                              {homeTeamEvents.length > 0 && (
+                                <div className="absolute w-1/3 text-sm" style={{ top: '150px', left: '16.67%', transform: 'translateX(-43%)' }}>
+                                  {homeTeamEvents.map((event, idx) => {
+                                    const formattedPlayer = event.player.replace(/^([A-Z]) /, "$1. ");
+                                    const formattedTime = event.time.replace(/ - /, " ");
+                                    
+                                    return (
+                                      <div key={idx} className="text-gray-300 flex items-center justify-center mb-1">
+                                        <span>
+                                          {formattedPlayer} {formattedTime}
+                                          {event.type === 'own' && ' (OG)'}
+                                        </span>
+                                        {event.type === 'goal' && (
+                                          <img src="/icons/goal.png" alt="Goal" className="w-4 h-4 ml-2" />
+                                        )}
+                                        {event.type === 'own' && (
+                                          <img src="/icons/owngoal.png" alt="Own Goal" className="w-6 h-6 ml-2" />
+                                        )}
+                                        {event.type === 'red' && (
+                                          <svg width="12" height="16" viewBox="0 0 10 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-2 mt-1.5">
+                                            <path d="M6.81836 0.605469H3.182C2.42888 0.605469 1.81836 1.21599 1.81836 1.96911V8.02956C1.81836 8.78268 2.42888 9.3932 3.182 9.3932H6.81836C7.57148 9.3932 8.182 8.78268 8.182 8.02956V1.96911C8.182 1.21599 7.57148 0.605469 6.81836 0.605469Z" fill="#DD3636" />
+                                          </svg>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                              ))}
+                              )}
                             </div>
-                          )}
-                        </div>
-                      </div>
+                            
+                            <div className="text-6xl font-bold text-purple-400 mx-6 -translate-y-6">
+                              {displayHomeScore} - {displayAwayScore}
+                            </div>
+                            
+                            <div className="flex-1 flex flex-col items-center">
+                              <img
+                                src={match.awayTeam.crest}
+                                alt=""
+                                className="w-20 h-20 object-contain mb-3"
+                              />
+                              <div className="font-medium text-lg text-center mb-2">
+                                {match.awayTeam.name}
+                              </div>
+                              {awayTeamEvents.length > 0 && (
+                                <div className="absolute w-1/3 text-sm" style={{ top: '150px', right: '16.67%', transform: 'translateX(46%)' }}>
+                                  {awayTeamEvents.map((event, idx) => {
+                                    const formattedPlayer = event.player.replace(/^([A-Z]) /, "$1. ");
+                                    const formattedTime = event.time.replace(/ - /, " ");
+                                    
+                                    return (
+                                      <div key={idx} className="text-gray-300 flex items-center justify-center mb-1">
+                                        <span>
+                                          {formattedPlayer} {formattedTime}
+                                          {event.type === 'own' && ' (OG)'}
+                                        </span>
+                                        {event.type === 'goal' && (
+                                          <img src="/icons/goal.png" alt="Goal" className="w-4 h-4 ml-2" />
+                                        )}
+                                        {event.type === 'own' && (
+                                          <img src="/icons/owngoal.png" alt="Own Goal" className="w-6 h-6 ml-2" />
+                                        )}
+                                        {event.type === 'red' && (
+                                          <svg width="12" height="16" viewBox="0 0 10 14" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-2 mt-1.5">
+                                            <path d="M6.81836 0.605469H3.182C2.42888 0.605469 1.81836 1.21599 1.81836 1.96911V8.02956C1.81836 8.78268 2.42888 9.3932 3.182 9.3932H6.81836C7.57148 9.3932 8.182 8.78268 8.182 8.02956V1.96911C8.182 1.21599 7.57148 0.605469 6.81836 0.605469Z" fill="#DD3636" />
+                                          </svg>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </>
                 )}

@@ -60,46 +60,6 @@ def get_match_details(request, match_id):
     except Exception as e:
         return Response({'error': str(e)}, status=500)
 
-@api_view(['GET'])
-def find_stream_links(request, home_team, away_team):
-    try:
-        url = "https://techcabal.net/schedule/soccerstreams/"
-        
-        response = requests.get(url)
-        
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        home_team_lower = home_team.lower()
-        away_team_lower = away_team.lower()
-        
-        matches = []
-        
-        for link in soup.find_all('a'):
-            text = link.get_text().lower()
-            if home_team_lower in text and away_team_lower in text:
-                matches.append({
-                    'text': link.get_text(),
-                    'href': link.get('href', ''),
-                })
-        
-        if not matches:
-            for element in soup.find_all(['div', 'p', 'span', 'li']):
-                text = element.get_text().lower()
-                if home_team_lower in text and away_team_lower in text:
-                    parent_link = element.find_parent('a')
-                    child_link = element.find('a')
-                    
-                    link = parent_link or child_link
-                    if link:
-                        matches.append({
-                            'text': element.get_text(),
-                            'href': link.get('href', ''),
-                        })
-        
-        return Response({'matches': matches})
-    
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @api_view(['GET'])
 def fetch_site_source(request):
@@ -111,18 +71,14 @@ def fetch_site_source(request):
                 'error': 'URL parameter is required',
             }, status=400)
             
-        print(f"Backend: Fetching source from: {url}")
-        
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
         }
         
         response = requests.get(url, headers=headers, timeout=10)
         status_code = response.status_code
-        print(f"Backend: Request status code: {status_code}")
         
         html_source = response.text
-        print(f"Backend: Response length: {len(html_source)} bytes")
         
         return Response({
             'source': html_source,
@@ -131,7 +87,6 @@ def fetch_site_source(request):
         })
             
     except Exception as e:
-        print(f"Backend Exception: {str(e)}")
         return Response({
             'error': str(e),
         }, status=500)
@@ -160,3 +115,79 @@ def get_team_matches(request, team_id):
             }, status=response.status_code)
     except Exception as e:
         return Response({'error': str(e)}, status=500)
+
+@api_view(['GET'])
+def get_stream_embed(request):
+    try:
+        home_team = request.query_params.get('home_team')
+        away_team = request.query_params.get('away_team')
+        match_date_str = request.query_params.get('match_date')
+        
+        if not home_team or not away_team or not match_date_str:
+            return Response({
+                'error': 'home_team, away_team, and match_date parameters are required',
+            }, status=400)
+            
+        targetUrl = "https://techcabal.net/schedule/soccerstreams/"
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        }
+        
+        response = requests.get(targetUrl, headers=headers, timeout=10)
+        
+        if response.status_code != 200:
+            return Response({
+                'error': f'Failed to fetch stream source: {response.status_code}',
+            }, status=response.status_code)
+        
+        html_source = response.text
+        soup = BeautifulSoup(html_source, 'html.parser')
+        
+        tables = soup.find_all('table')
+        
+        if not tables or len(tables) == 0:
+            return Response({
+                'stream_url': None
+            })
+        
+        matchDate = datetime.datetime.fromisoformat(match_date_str.replace('Z', '+00:00'))
+        timeToFind = matchDate.strftime('%H:%M')
+        
+        home_first_letter = home_team[0].lower()
+        away_first_letter = away_team[0].lower()
+        
+        rows = tables[0].find_all('tr')
+        
+        streamId = None
+        
+        for i, row in enumerate(rows):
+            row_text = row.get_text().strip().lower()
+            
+            if timeToFind in row_text and home_first_letter in row_text and away_first_letter in row_text:
+                links = row.find_all('a')
+                for link in links:
+                    href = link.get('href', '')
+                    if href and '/s' in href:
+                        matchUrl = href.split('/s')
+                        if len(matchUrl) > 1:
+                            streamId = matchUrl[1].split('.')[0].replace('/', '')
+                            break
+                if streamId:
+                    break
+        
+        if streamId:
+            stream_url = f"https://techcabal.net/clip/s{streamId}.html"
+            return Response({
+                'stream_url': stream_url
+            })
+        else:
+            return Response({
+                'stream_url': None
+            })
+            
+    except Exception as e:
+        return Response({
+            'error': str(e),
+            'stream_url': None
+        }, status=500)
