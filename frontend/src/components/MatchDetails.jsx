@@ -29,13 +29,13 @@ const formatBulgarianTime = (utcDate) => {
   })}`;
 };
 
-const isMatchTimeStarted = (utcDate) => {
+const isMatchTimeStarted = (utcDate, matchStatus) => {
   const matchTime = new Date(utcDate);
   const now = new Date();
   const matchEndTime = new Date(matchTime);
   matchEndTime.setHours(matchEndTime.getHours() + 3);
 
-  return now >= matchTime && now <= matchEndTime && !match?.status?.includes("FINISHED");
+  return now >= matchTime && now <= matchEndTime && !matchStatus?.includes("FINISHED");
 };
 
 function MatchDetails({ match, isOpen, onClose }) {
@@ -353,8 +353,10 @@ function MatchDetails({ match, isOpen, onClose }) {
       });
 
       if (response.data && response.data.stream_url) {
+        console.log("Stream URL found:", response.data.stream_url);
         setStreamUrl(response.data.stream_url);
       } else {
+        console.log("No stream URL found in response:", response.data);
         const homeTeam = match.homeTeam.shortName || match.homeTeam.name;
         const awayTeam = match.awayTeam.shortName || match.awayTeam.name;
         toast.info(`Stream not available for ${homeTeam} vs ${awayTeam}`, {
@@ -549,7 +551,7 @@ function MatchDetails({ match, isOpen, onClose }) {
                           onClick={(e) => {
                             e.preventDefault();
                             if (
-                              (isMatchTimeStarted(match.utcDate) ||
+                              (isMatchTimeStarted(match.utcDate, match.status) ||
                                 match.status === "IN_PLAY" ||
                                 match.status === "PAUSED") &&
                               match.status !== "FINISHED"
@@ -560,7 +562,7 @@ function MatchDetails({ match, isOpen, onClose }) {
                           }}
                           className={`flex items-center px-4 py-2 rounded-lg transition-colors duration-200 text-sm
                           ${
-                            (isMatchTimeStarted(match.utcDate) ||
+                            (isMatchTimeStarted(match.utcDate, match.status) ||
                               match.status === "IN_PLAY" ||
                               match.status === "PAUSED") &&
                             match.status !== "FINISHED"
@@ -571,11 +573,11 @@ function MatchDetails({ match, isOpen, onClose }) {
                           }`}>
                           <PlayArrowIcon className="w-4 h-4 mr-2" />
                           <span>
-                            {fetchingSource 
-                              ? "Loading..." 
+                            {fetchingSource
+                              ? "Loading..."
                               : match.status === "FINISHED"
                               ? "Match has ended"
-                              : isMatchTimeStarted(match.utcDate)
+                              : isMatchTimeStarted(match.utcDate, match.status)
                               ? "Watch Live"
                               : `Watch at ${formatMatchDateTime(match.utcDate)}`}
                           </span>
