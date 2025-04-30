@@ -29,13 +29,29 @@ const formatBulgarianTime = (utcDate) => {
   })}`;
 };
 
-const isMatchTimeStarted = (utcDate, matchStatus) => {
+const isMatchFinished = (utcDate) => {
   const matchTime = new Date(utcDate);
   const now = new Date();
   const matchEndTime = new Date(matchTime);
   matchEndTime.setHours(matchEndTime.getHours() + 3);
+  
+  return now > matchEndTime;
+};
 
-  return now >= matchTime && now <= matchEndTime && !matchStatus?.includes("FINISHED");
+const isMatchTimeStarted = (utcDate, matchStatus) => {
+  if (!utcDate || matchStatus === null || matchStatus === undefined) return false;
+  
+  const matchTime = new Date(utcDate);
+  const now = new Date();
+  const matchEndTime = new Date(matchTime);
+  matchEndTime.setHours(matchEndTime.getHours() + 3);
+  
+  console.log("now " + now);
+  console.log("matchTime " + matchTime);
+  console.log("matchEndTime " + matchEndTime);
+  console.log("isMatchFinished " + isMatchFinished(utcDate));
+
+  return now >= matchTime && now <= matchEndTime && !matchStatus?.includes("FINISHED") && !isMatchFinished(utcDate);
 };
 
 function MatchDetails({ match, isOpen, onClose }) {
@@ -446,8 +462,13 @@ function MatchDetails({ match, isOpen, onClose }) {
       }
     };
     window.addEventListener("keydown", handleEsc);
+
+    if (match && match.status) {
+      console.log(match.status);
+    }
+    
     return () => window.removeEventListener("keydown", handleEsc);
-  }, [showUserProfile]);
+  }, [showUserProfile, match]);
 
   if (!match) return null;
 
@@ -565,9 +586,10 @@ function MatchDetails({ match, isOpen, onClose }) {
                             (isMatchTimeStarted(match.utcDate, match.status) ||
                               match.status === "IN_PLAY" ||
                               match.status === "PAUSED") &&
-                            match.status !== "FINISHED"
+                            match.status !== "FINISHED" &&
+                            !isMatchFinished(match.utcDate)
                               ? "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
-                              : match.status === "FINISHED"
+                              : match.status === "FINISHED" || isMatchFinished(match.utcDate)
                               ? "bg-dark-400 text-gray-400 cursor-not-allowed pointer-events-none"
                               : "bg-dark-300 text-gray-400 cursor-not-allowed pointer-events-none"
                           }`}>
@@ -575,7 +597,7 @@ function MatchDetails({ match, isOpen, onClose }) {
                           <span>
                             {fetchingSource
                               ? "Loading..."
-                              : match.status === "FINISHED"
+                              : match.status === "FINISHED" || isMatchFinished(match.utcDate)
                               ? "Match has ended"
                               : isMatchTimeStarted(match.utcDate, match.status)
                               ? "Watch Live"
@@ -591,7 +613,7 @@ function MatchDetails({ match, isOpen, onClose }) {
                           )}`}>
                           {match.matchStatus
                             ? match.matchStatus
-                            : match.status === "FINISHED"
+                            : match.status === "FINISHED" || isMatchFinished(match.utcDate)
                             ? "FT"
                             : getStatusText(match.status, match.utcDate)}
                         </div>
