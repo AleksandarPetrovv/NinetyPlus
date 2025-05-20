@@ -60,3 +60,12 @@ export const formatBulgarianTime = (utcDate) => {
     minute: "2-digit",
   });
 };
+
+export const getMatchEvents = async (matchId) => {
+  try {
+    const response = await api.get(`/matches/match-events/${matchId}/`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};

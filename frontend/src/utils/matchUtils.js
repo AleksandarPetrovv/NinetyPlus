@@ -76,7 +76,17 @@ export const getStatusText = (status, utcDate) => {
       return "FT";
     case "TIMED": 
     case "SCHEDULED": {
-      return formatMatchDateTime(utcDate);
+      const matchDate = new Date(utcDate);
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+      
+      if (matchDate.toDateString() === today.toDateString() || 
+          matchDate.toDateString() === yesterday.toDateString()) {
+        return formatMatchDateTime(utcDate);
+      } else {
+        return formatMatchDateTime(utcDate);
+      }
     }
     default:
       return status;

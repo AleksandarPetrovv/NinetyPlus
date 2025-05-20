@@ -15,6 +15,14 @@ import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 
 function MatchCard({ match, onClick, isFavorite, favoriteTeam }) {
+  const matchDate = new Date(match.utcDate);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  
+  const isYesterdayOrBefore = matchDate <= yesterday;
+  const shouldShowScore = match.status === "FINISHED" || isYesterdayOrBefore;
+
   return (
     <div
       onClick={() => onClick(match)}
@@ -51,12 +59,12 @@ function MatchCard({ match, onClick, isFavorite, favoriteTeam }) {
               </div>
             )}
             <div className={`text-3xl font-bold text-purple-400 flex items-center ${
-              (match.status === "TIMED" || match.status === "SCHEDULED") && 
+              (!shouldShowScore && (match.status === "TIMED" || match.status === "SCHEDULED")) && 
               getStatusText(match.status, match.utcDate).includes(",") 
                 ? "text-xl"
                 : ""
             }`}>
-              {match.status === "TIMED" || match.status === "SCHEDULED"
+              {!shouldShowScore && (match.status === "TIMED" || match.status === "SCHEDULED")
                 ? getStatusText(match.status, match.utcDate)
                 : <span className="mb-8">{match.score.fullTime.home} - {match.score.fullTime.away}</span>}
             </div>
@@ -136,7 +144,7 @@ function Matches() {
                 const upcomingMatches = response.data.matches
                   .filter(match => match.status === "SCHEDULED" || match.status === "TIMED")
                   .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
-                  
+                
                 if (upcomingMatches.length > 0) {
                   favoriteTeamMatch = upcomingMatches[0];
                 }
@@ -193,6 +201,7 @@ function Matches() {
         }
       } catch (err) {
         console.error("Error fetching matches:", err);
+        
         if (!isMounted) return;
         
         if (err.response?.status === 429) {
@@ -308,9 +317,21 @@ function Matches() {
                       </div>
                     )}
                     <div className="text-3xl font-bold text-purple-400 flex items-center">
-                      {favoriteTeamMatch.status === "TIMED" || favoriteTeamMatch.status === "SCHEDULED"
-                        ? getStatusText(favoriteTeamMatch.status, favoriteTeamMatch.utcDate)
-                        : <span className="mb-8">{favoriteTeamMatch.score.fullTime.home} - {favoriteTeamMatch.score.fullTime.away}</span>}
+                      {(() => {
+                        const matchDate = new Date(favoriteTeamMatch.utcDate);
+                        const today = new Date();
+                        const yesterday = new Date();
+                        yesterday.setDate(today.getDate() - 1);
+                        
+                        const isYesterdayOrBefore = matchDate <= yesterday;
+                        const shouldShowScore = favoriteTeamMatch.status === "FINISHED" || isYesterdayOrBefore;
+                        
+                        if (!shouldShowScore && (favoriteTeamMatch.status === "TIMED" || favoriteTeamMatch.status === "SCHEDULED")) {
+                          return getStatusText(favoriteTeamMatch.status, favoriteTeamMatch.utcDate);
+                        } else {
+                          return <span className="mb-8">{favoriteTeamMatch.score.fullTime.home} - {favoriteTeamMatch.score.fullTime.away}</span>;
+                        }
+                      })()}
                     </div>
                   </div>
 

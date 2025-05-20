@@ -191,3 +191,150 @@ def get_stream_embed(request):
             'error': str(e),
             'stream_url': None
         }, status=500)
+
+@api_view(['GET'])
+def get_match_events(request, match_id):
+    try:
+        response = requests.get(
+            f'{FOOTBALL_API_URL}/matches/{match_id}',
+            headers={'X-Auth-Token': FOOTBALL_API_KEY}
+        )
+        
+        if response.status_code != 200:
+            return Response({
+                'error': f'Failed to fetch match data: {response.status_code}'
+            }, status=response.status_code)
+        
+        match_data = response.json()
+        home_team = match_data.get('homeTeam', {}).get('name', '')
+        away_team = match_data.get('awayTeam', {}).get('name', '')
+
+        match_date = datetime.datetime.fromisoformat(match_data.get('utcDate').replace('Z', '+00:00'))
+        now = datetime.datetime.now(datetime.timezone.utc)
+        
+        if match_date > now:
+            return Response({
+                'homeTeamEvents': [],
+                'awayTeamEvents': []
+            })
+
+        year = match_date.strftime('%Y')
+        month = match_date.strftime('%m')
+        day = match_date.strftime('%d')
+        formatted_date = f"{year}{month}{day}"
+        
+        espn_url = f"https://www.espn.com/soccer/scoreboard/_/date/{formatted_date}"
+
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
+        }
+        
+        espn_response = requests.get(espn_url, headers=headers, timeout=10)
+        
+        if espn_response.status_code != 200:
+            return Response({
+                'homeTeamEvents': [],
+                'awayTeamEvents': []
+            })
+
+        home_events = []
+        away_events = []
+        
+        soup = BeautifulSoup(espn_response.text, 'html.parser')
+
+        card_sections = soup.select('section.Card.gameModules')
+        
+        for card in card_sections:
+            header = card.select_one('header.Card__Header')
+            if not header:
+                continue
+                
+            league_label = header.get('aria-label', '')
+            if not league_label:
+                continue
+                
+            top5_leagues = [
+                "English Premier League",
+                "Spanish LALIGA",
+                "German Bundesliga",
+                "Italian Serie A",
+                "French Ligue 1",
+                "UEFA Champions League",
+                "UEFA Europa League",
+            ]
+            
+            if not any(league in league_label for league in top5_leagues):
+                continue
+                
+            teams = card.select('.SoccerPerformers__Competitor__Team__Name')
+            
+            for i, team_element in enumerate(teams):
+                team_name = team_element.get_text().strip()
+                
+                if (team_name in home_team or home_team in team_name or 
+                    team_name in away_team or away_team in team_name):
+                    
+                    competitor_section = team_element.find_parent(class_='SoccerPerformers__Competitor')
+                    if not competitor_section:
+                        continue
+                        
+                    is_home_team = team_name in home_team or home_team in team_name
+                    events_array = home_events if is_home_team else away_events
+                    
+                    goal_infos = competitor_section.select('.SoccerPerformers__Competitor__Info')
+                    
+                    for info_section in goal_infos:
+                        is_red_card = info_section.select_one('.SoccerPerformers__RedCardIcon')
+                        
+                        if is_red_card:
+                            red_card_items = info_section.select('.SoccerPerformers__Competitor__Info__GoalsList__Item')
+                            
+                            for item in red_card_items:
+                                player_el = item.select_one('.Soccer__PlayerName')
+                                time_el = item.select_one('.GoalScore__Time')
+                                
+                                if player_el and time_el:
+                                    player_name = player_el.get_text().strip()
+                                    time = time_el.get_text().strip().replace(' - ', '')
+                                    
+                                    events_array.append({
+                                        'type': 'red',
+                                        'player': player_name,
+                                        'time': time
+                                    })
+                        
+                        elif info_section.select_one('.SoccerPerformers__GoalIcon'):
+                            no_goals = info_section.select_one('.SoccerPerformers__Competitor__Info__GoalsList--noGoals')
+                            if no_goals:
+                                continue
+                                
+                            goal_items = info_section.select('.SoccerPerformers__Competitor__Info__GoalsList__Item')
+                            
+                            for item in goal_items:
+                                player_el = item.select_one('.Soccer__PlayerName')
+                                time_el = item.select_one('.GoalScore__Time')
+                                
+                                if player_el and time_el:
+                                    player_name = player_el.get_text().strip()
+                                    time = time_el.get_text().strip().replace(' - ', '')
+                                    
+                                    if 'OG' in time:
+                                        events_array.append({
+                                            'type': 'own',
+                                            'player': player_name,
+                                            'time': time.replace('OG', '').strip()
+                                        })
+                                    else:
+                                        events_array.append({
+                                            'type': 'goal',
+                                            'player': player_name,
+                                            'time': time
+                                        })
+        
+        return Response({
+            'homeTeamEvents': home_events,
+            'awayTeamEvents': away_events
+        })
+        
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)

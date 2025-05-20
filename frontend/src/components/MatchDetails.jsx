@@ -45,11 +45,6 @@ const isMatchTimeStarted = (utcDate, matchStatus) => {
   const now = new Date();
   const matchEndTime = new Date(matchTime);
   matchEndTime.setHours(matchEndTime.getHours() + 3);
-  
-  console.log("now " + now);
-  console.log("matchTime " + matchTime);
-  console.log("matchEndTime " + matchEndTime);
-  console.log("isMatchFinished " + isMatchFinished(utcDate));
 
   return now >= matchTime && now <= matchEndTime && !matchStatus?.includes("FINISHED") && !isMatchFinished(utcDate);
 };
@@ -101,53 +96,6 @@ function MatchDetails({ match, isOpen, onClose }) {
     setShowLogin(true);
   };
 
-  const extractGoalscorers = (html) => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-
-    const goalscorers = [];
-
-    const competitors = doc.querySelectorAll(".SoccerPerformers__Competitor");
-
-    competitors.forEach((competitor) => {
-      const teamNameEl = competitor.querySelector(
-        ".SoccerPerformers__Competitor__Team__Name"
-      );
-      if (!teamNameEl) return;
-
-      const teamName = teamNameEl.textContent.trim();
-
-      const noGoals = competitor.querySelector(
-        ".SoccerPerformers__Competitor__Info__GoalsList--noGoals"
-      );
-      if (noGoals) {
-        return;
-      }
-
-      const goalItems = competitor.querySelectorAll(
-        ".SoccerPerformers__Competitor__Info__GoalsList__Item"
-      );
-
-      goalItems.forEach((item) => {
-        const playerEl = item.querySelector(".Soccer__PlayerName");
-        const timeEl = item.querySelector(".GoalScore__Time");
-
-        if (playerEl && timeEl) {
-          const playerName = playerEl.textContent.trim();
-          const time = timeEl.textContent.trim().replace(" - ", "");
-
-          goalscorers.push({
-            player: playerName,
-            team: teamName,
-            time: time,
-          });
-        }
-      });
-    });
-
-    return goalscorers;
-  };
-
   useEffect(() => {
     const fetchDetails = async () => {
       if (!match) return;
@@ -168,165 +116,15 @@ function MatchDetails({ match, isOpen, onClose }) {
         setIsFutureMatch(isFutureMatch);
 
         if (!isFutureMatch) {
-          const homeEvents = [];
-          const awayEvents = [];
-
           try {
-            const year = matchDate.getFullYear();
-            const month = String(matchDate.getMonth() + 1).padStart(2, "0");
-            const day = String(matchDate.getDate()).padStart(2, "0");
-            const formattedDate = `${year}${month}${day}`;
-
-            const espnUrl = `https://www.espn.com/soccer/scoreboard/_/date/${formattedDate}`;
-
-            const response = await api.get("/matches/fetch-source/", {
-              params: { url: espnUrl },
-            });
-
-            if (response.data && response.data.source) {
-              const homeTeam = match.homeTeam.name;
-              const awayTeam = match.awayTeam.name;
-
-              const parser = new DOMParser();
-              const doc = parser.parseFromString(
-                response.data.source,
-                "text/html"
-              );
-
-              const cardSections = doc.querySelectorAll(
-                "section.Card.gameModules"
-              );
-
-              cardSections.forEach((card) => {
-                const header = card.querySelector("header.Card__Header");
-                if (!header) return;
-
-                const leagueLabel = header.getAttribute("aria-label");
-                if (!leagueLabel) return;
-
-                const top5Leagues = [
-                  "English Premier League",
-                  "Spanish LALIGA",
-                  "German Bundesliga",
-                  "Italian Serie A",
-                  "French Ligue 1",
-                  "UEFA Champions League",
-                  "UEFA Europa League",
-                ];
-
-                if (
-                  !top5Leagues.some((league) => leagueLabel.includes(league))
-                ) {
-                  return;
-                }
-
-                const teams = card.querySelectorAll(
-                  ".SoccerPerformers__Competitor__Team__Name"
-                );
-
-                for (let i = 0; i < teams.length; i++) {
-                  const teamName = teams[i].textContent.trim();
-
-                  if (
-                    teamName.includes(homeTeam) ||
-                    homeTeam.includes(teamName) ||
-                    teamName.includes(awayTeam) ||
-                    awayTeam.includes(teamName)
-                  ) {
-                    const competitorSection = teams[i].closest(
-                      ".SoccerPerformers__Competitor"
-                    );
-                    if (!competitorSection) continue;
-
-                    const isHomeTeam =
-                      teamName.includes(homeTeam) ||
-                      homeTeam.includes(teamName);
-                    const eventsArray = isHomeTeam ? homeEvents : awayEvents;
-
-                    const goalInfos = competitorSection.querySelectorAll(
-                      ".SoccerPerformers__Competitor__Info"
-                    );
-
-                    goalInfos.forEach((infoSection) => {
-                      const isRedCard = infoSection.querySelector(
-                        ".SoccerPerformers__RedCardIcon"
-                      );
-
-                      if (isRedCard) {
-                        const redCardItems = infoSection.querySelectorAll(
-                          ".SoccerPerformers__Competitor__Info__GoalsList__Item"
-                        );
-                        redCardItems.forEach((item) => {
-                          const playerEl = item.querySelector(
-                            ".Soccer__PlayerName"
-                          );
-                          const timeEl = item.querySelector(".GoalScore__Time");
-
-                          if (playerEl && timeEl) {
-                            const playerName = playerEl.textContent.trim();
-                            const time = timeEl.textContent
-                              .trim()
-                              .replace(" - ", "");
-
-                            eventsArray.push({
-                              type: "red",
-                              player: playerName,
-                              time: time,
-                            });
-                          }
-                        });
-                      } else if (
-                        infoSection.querySelector(".SoccerPerformers__GoalIcon")
-                      ) {
-                        const noGoals = infoSection.querySelector(
-                          ".SoccerPerformers__Competitor__Info__GoalsList--noGoals"
-                        );
-                        if (noGoals) {
-                          return;
-                        }
-
-                        const goalItems = infoSection.querySelectorAll(
-                          ".SoccerPerformers__Competitor__Info__GoalsList__Item"
-                        );
-
-                        goalItems.forEach((item) => {
-                          const playerEl = item.querySelector(
-                            ".Soccer__PlayerName"
-                          );
-                          const timeEl = item.querySelector(".GoalScore__Time");
-
-                          if (playerEl && timeEl) {
-                            const playerName = playerEl.textContent.trim();
-                            const time = timeEl.textContent
-                              .trim()
-                              .replace(" - ", "");
-
-                            if (time.includes("OG")) {
-                              eventsArray.push({
-                                type: "own",
-                                player: playerName,
-                                time: time.replace("OG", "").trim(),
-                              });
-                            } else {
-                              eventsArray.push({
-                                type: "goal",
-                                player: playerName,
-                                time: time,
-                              });
-                            }
-                          }
-                        });
-                      }
-                    });
-                  }
-                }
-              });
-
-              setHomeTeamEvents(homeEvents);
-              setAwayTeamEvents(awayEvents);
+            const eventsResponse = await api.get(`/matches/match-events/${match.id}/`);
+            
+            if (eventsResponse.data) {
+              setHomeTeamEvents(eventsResponse.data.homeTeamEvents || []);
+              setAwayTeamEvents(eventsResponse.data.awayTeamEvents || []);
             }
-          } catch (espnError) {
-            console.error("Error fetching ESPN data:", espnError);
+          } catch (eventsError) {
+            console.error("Error fetching match events:", eventsError);
           }
         }
       } catch (err) {
@@ -369,10 +167,8 @@ function MatchDetails({ match, isOpen, onClose }) {
       });
 
       if (response.data && response.data.stream_url) {
-        console.log("Stream URL found:", response.data.stream_url);
         setStreamUrl(response.data.stream_url);
       } else {
-        console.log("No stream URL found in response:", response.data);
         const homeTeam = match.homeTeam.shortName || match.homeTeam.name;
         const awayTeam = match.awayTeam.shortName || match.awayTeam.name;
         toast.info(`Stream not available for ${homeTeam} vs ${awayTeam}`, {
@@ -462,10 +258,6 @@ function MatchDetails({ match, isOpen, onClose }) {
       }
     };
     window.addEventListener("keydown", handleEsc);
-
-    if (match && match.status) {
-      console.log(match.status);
-    }
     
     return () => window.removeEventListener("keydown", handleEsc);
   }, [showUserProfile, match]);
