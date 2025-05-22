@@ -102,6 +102,7 @@ function Matches() {
   const prevMatchesRef = useRef(null);
   const [animateIn, setAnimateIn] = useState(false);
   const [favoriteTeamMatch, setFavoriteTeamMatch] = useState(null);
+  const [noMatches, setNoMatches] = useState(false);
   
   useEffect(() => {
     setAnimateIn(true);
@@ -120,8 +121,13 @@ function Matches() {
         
         if (!isMounted) return;
         
-        if (!allMatchesData || allMatchesData.length === 0) {
+        if (!allMatchesData) {
           setIsRateLimited(true);
+          return;
+        }
+
+        if (allMatchesData.length === 0) {
+          setNoMatches(true);
           return;
         }
         
@@ -244,6 +250,15 @@ function Matches() {
         <p className="text-yellow-600">
           Please wait 60 seconds. The API rate limit is 10 calls / minute.
         </p>
+      </div>
+    );
+
+    if (noMatches)
+    return (
+      <div className="col-span-2 p-6 text-center bg-gray-300 rounded-xl border border-red-200">
+        <h3 className="text-2xl font-semibold text-purple-500 mb-2">
+          We have no matches to show you today!
+        </h3>
       </div>
     );
 
