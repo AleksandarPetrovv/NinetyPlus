@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { getMatchDetails } from "../services/footballService";
+import { getMatchDetails, formatBulgarianTimeSync } from "../services/footballService";
 import {
   formatLeagueName,
   getStatusColor,
-  getStatusText,
-  formatMatchDateTime,
+  getStatusTextSync,
+  formatMatchDateTimeSync,
 } from "../utils/matchUtils";
 import CloseIcon from "@mui/icons-material/Close";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
@@ -20,14 +20,6 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import ReactDOM from "react-dom";
 import UserProfile from "./UserProfile";
 
-const formatBulgarianTime = (utcDate) => {
-  const date = new Date(utcDate);
-  return `${date.toLocaleTimeString("bg-BG", {
-    timeZone: "Europe/Sofia",
-    hour: "2-digit",
-    minute: "2-digit",
-  })}`;
-};
 
 const isMatchFinished = (utcDate) => {
   const matchTime = new Date(utcDate);
@@ -393,7 +385,7 @@ function MatchDetails({ match, isOpen, onClose }) {
                               ? "Match has ended"
                               : isMatchTimeStarted(match.utcDate, match.status)
                               ? "Watch Live"
-                              : `Watch at ${formatMatchDateTime(match.utcDate)}`}
+                              : `Starts ${formatMatchDateTimeSync(match.utcDate)}`}
                           </span>
                         </a>
                       </div>
@@ -402,12 +394,11 @@ function MatchDetails({ match, isOpen, onClose }) {
                         <div
                           className={`px-3 py-1 text-sm rounded-md ${getStatusColor(
                             match.status
-                          )}`}>
-                          {match.matchStatus
+                          )}`}>                          {match.matchStatus
                             ? match.matchStatus
                             : match.status === "FINISHED" || isMatchFinished(match.utcDate)
                             ? "FT"
-                            : getStatusText(match.status, match.utcDate)}
+                            : getStatusTextSync(match.status, match.utcDate)}
                         </div>
                       </div>
 

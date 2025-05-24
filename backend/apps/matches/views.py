@@ -12,6 +12,7 @@ from django.views import View
 import json
 from bs4 import BeautifulSoup
 import datetime
+import pytz
 
 FOOTBALL_API_URL = 'https://api.football-data.org/v4'
 FOOTBALL_API_KEY = os.getenv('FOOTBALL_API_KEY')
@@ -20,6 +21,50 @@ class MatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Match
         fields = ['id', 'match_id', 'home_team', 'away_team', 'score', 'status', 'date']
+
+@api_view(['GET'])
+def format_date(request):
+    try:
+        utc_date_str = request.query_params.get('utc_date')
+        format_type = request.query_params.get('format_type', 'time_only')
+        
+        if not utc_date_str:
+            return Response({'error': 'utc_date parameter is required'}, status=400)
+
+        utc_date = datetime.datetime.fromisoformat(utc_date_str.replace('Z', '+00:00'))
+        
+        bg_timezone = pytz.timezone('Europe/Sofia')
+        bg_date = utc_date.astimezone(bg_timezone)
+        
+        if format_type == 'time_only':
+            formatted_date = bg_date.strftime('%H:%M')
+            return Response({'formatted_date': formatted_date})
+        elif format_type == 'date_time':
+            month_day = bg_date.strftime('%d %b')
+            time = bg_date.strftime('%H:%M')
+            formatted_date = f"{month_day}, {time}"
+            return Response({'formatted_date': formatted_date})
+        elif format_type == 'match_status':
+            today = datetime.datetime.now(bg_timezone).date()
+            tomorrow = today + datetime.timedelta(days=1)
+            
+            if bg_date.date() == today:
+                formatted_date = bg_date.strftime('%H:%M')
+            elif bg_date.date() == tomorrow:
+                formatted_date = f"Tomorrow, {bg_date.strftime('%H:%M')}"
+            else:
+                month_day = bg_date.strftime('%d %b')
+                time = bg_date.strftime('%H:%M')
+                formatted_date = f"{month_day}, {time}"
+                
+            return Response({'formatted_date': formatted_date})
+        else:
+            return Response({'error': 'Invalid format_type parameter'}, status=400)
+            
+    except ValueError as e:
+        return Response({'error': f'Invalid date format: {str(e)}'}, status=400)
+    except Exception as e:
+        return Response({'error': str(e)}, status=500)
 
 @api_view(['GET'])
 def match_list(request):

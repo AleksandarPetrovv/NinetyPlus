@@ -9,7 +9,7 @@ import { LEAGUE_ICONS } from "../config/leagueIcons";
 import {
   formatLeagueName,
   getStatusColor,
-  getStatusText,
+  getStatusTextSync,
 } from "../utils/matchUtils";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
@@ -55,17 +55,17 @@ function MatchCard({ match, onClick, isFavorite, favoriteTeam }) {
                 className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
                   match.status
                 )}`}>
-                {getStatusText(match.status, match.utcDate)}
+                {getStatusTextSync(match.status, match.utcDate)}
               </div>
             )}
             <div className={`text-3xl font-bold text-purple-400 flex items-center ${
               (!shouldShowScore && (match.status === "TIMED" || match.status === "SCHEDULED")) && 
-              getStatusText(match.status, match.utcDate).includes(",") 
+              getStatusTextSync(match.status, match.utcDate).includes(",") 
                 ? "text-xl"
                 : ""
             }`}>
               {!shouldShowScore && (match.status === "TIMED" || match.status === "SCHEDULED")
-                ? getStatusText(match.status, match.utcDate)
+                ? getStatusTextSync(match.status, match.utcDate)
                 : <span className="mb-8">{match.score.fullTime.home} - {match.score.fullTime.away}</span>}
             </div>
           </div>
@@ -328,7 +328,7 @@ function Matches() {
                         className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
                           favoriteTeamMatch.status
                         )}`}>
-                        {getStatusText(favoriteTeamMatch.status, favoriteTeamMatch.utcDate)}
+                        {getStatusTextSync(favoriteTeamMatch.status, favoriteTeamMatch.utcDate)}
                       </div>
                     )}
                     <div className="text-3xl font-bold text-purple-400 flex items-center">
@@ -342,7 +342,7 @@ function Matches() {
                         const shouldShowScore = favoriteTeamMatch.status === "FINISHED" || isYesterdayOrBefore;
                         
                         if (!shouldShowScore && (favoriteTeamMatch.status === "TIMED" || favoriteTeamMatch.status === "SCHEDULED")) {
-                          return getStatusText(favoriteTeamMatch.status, favoriteTeamMatch.utcDate);
+                          return getStatusTextSync(favoriteTeamMatch.status, favoriteTeamMatch.utcDate);
                         } else {
                           return <span className="mb-8">{favoriteTeamMatch.score.fullTime.home} - {favoriteTeamMatch.score.fullTime.away}</span>;
                         }

@@ -52,13 +52,28 @@ export const getMatchDetails = async (matchId) => {
   }
 };
 
-export const formatBulgarianTime = (utcDate) => {
+export const formatBulgarianTimeSync = (utcDate) => {
   const date = new Date(utcDate);
   return date.toLocaleTimeString("bg-BG", {
     timeZone: "Europe/Sofia",
     hour: "2-digit",
     minute: "2-digit",
   });
+};
+
+export const formatBulgarianTime = async (utcDate) => {
+  try {
+    const response = await api.get(`/matches/format-date/`, {
+      params: {
+        utc_date: utcDate,
+        format_type: 'time_only'
+      }
+    });
+    return response.data.formatted_date;
+  } catch (error) {
+    console.error("Error formatting time:", error);
+    return formatBulgarianTimeSync(utcDate);
+  }
 };
 
 export const getMatchEvents = async (matchId) => {

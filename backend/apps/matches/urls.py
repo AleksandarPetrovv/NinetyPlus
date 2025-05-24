@@ -11,4 +11,5 @@ urlpatterns = [
     path('team/<int:team_id>/', views.get_team_matches, name='team-matches'),
     path('stream-embed/', views.get_stream_embed, name='get-stream-embed'),
     path('match-events/<int:match_id>/', views.get_match_events, name='match-events'),
+    path('format-date/', views.format_date, name='format-date'),
 ]

@@ -4,7 +4,7 @@ import { getMatches } from "../services/footballService";
 import {
   formatLeagueName,
   getStatusColor,
-  getStatusText,
+  getStatusTextSync,
 } from "../utils/matchUtils";
 import { LEAGUE_ICONS } from "../config/leagueIcons";
 import SportsIcon from "@mui/icons-material/Sports";
@@ -198,7 +198,8 @@ function Home() {
                         className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
                           favoriteTeamMatch.status
                         )}`}>
-                        {getStatusText(
+                        {" "}
+                        {getStatusTextSync(
                           favoriteTeamMatch.status,
                           favoriteTeamMatch.utcDate
                         )}
@@ -207,7 +208,7 @@ function Home() {
                   <div className="text-3xl font-bold text-purple-400 flex items-center">
                     {favoriteTeamMatch.status === "TIMED" ||
                     favoriteTeamMatch.status === "SCHEDULED"
-                      ? getStatusText(
+                      ? getStatusTextSync(
                           favoriteTeamMatch.status,
                           favoriteTeamMatch.utcDate
                         )
@@ -306,22 +307,23 @@ function Home() {
                             className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
                               match.status
                             )}`}>
-                            {getStatusText(match.status, match.utcDate)}
+                            {getStatusTextSync(match.status, match.utcDate)}
                           </div>
                         )}
                       <div
                         className={`text-3xl font-bold text-purple-400 flex items-center ${
                           (match.status === "TIMED" ||
                             match.status === "SCHEDULED") &&
-                          getStatusText(match.status, match.utcDate).includes(
-                            ","
-                          )
+                          getStatusTextSync(
+                            match.status,
+                            match.utcDate
+                          ).includes(",")
                             ? "text-xl"
                             : ""
                         }`}>
                         {match.status === "TIMED" ||
                         match.status === "SCHEDULED" ? (
-                          getStatusText(match.status, match.utcDate)
+                          getStatusTextSync(match.status, match.utcDate)
                         ) : (
                           <span className="mb-8">
                             {match.score.fullTime.home} -{" "}

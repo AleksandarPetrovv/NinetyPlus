@@ -1,3 +1,5 @@
+import api from "../services/api";
+
 export const formatLeagueName = (competitionName) => {
   if (competitionName === "Primera Division") {
     return "La Liga";
@@ -5,7 +7,7 @@ export const formatLeagueName = (competitionName) => {
   return competitionName;
 };
 
-export const formatMatchDateTime = (utcDate) => {
+export const formatMatchDateTimeSync = (utcDate) => {
   const matchDate = new Date(utcDate);
   const today = new Date();
   const tomorrow = new Date();
@@ -39,6 +41,21 @@ export const formatMatchDateTime = (utcDate) => {
   }
 };
 
+export const formatMatchDateTime = async (utcDate) => {
+  try {
+    const response = await api.get(`/matches/format-date/`, {
+      params: {
+        utc_date: utcDate,
+        format_type: 'match_status'
+      }
+    });
+    return response.data.formatted_date;
+  } catch (error) {
+    console.error("Error formatting date time:", error);
+    return formatMatchDateTimeSync(utcDate);
+  }
+};
+
 export const getStatusColor = (status) => {
   switch (status) {
     case "IN_PLAY":
@@ -52,7 +69,7 @@ export const getStatusColor = (status) => {
   }
 };
 
-export const getStatusText = (status, utcDate) => {
+export const getStatusTextSync = (status, utcDate) => {
   switch (status) {
     case "IN_PLAY": {
       const kickoff = new Date(utcDate);
@@ -76,16 +93,43 @@ export const getStatusText = (status, utcDate) => {
       return "FT";
     case "TIMED": 
     case "SCHEDULED": {
-      const matchDate = new Date(utcDate);
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-      
-      if (matchDate.toDateString() === today.toDateString() || 
-          matchDate.toDateString() === yesterday.toDateString()) {
-        return formatMatchDateTime(utcDate);
-      } else {
-        return formatMatchDateTime(utcDate);
+      return formatMatchDateTimeSync(utcDate);
+    }
+    default:
+      return status;
+  }
+};
+
+export const getStatusText = async (status, utcDate) => {
+  switch (status) {
+    case "IN_PLAY": {
+      const kickoff = new Date(utcDate);
+      const now = new Date();
+      const diffInMinutes = Math.floor((now - kickoff) / (1000 * 60));
+
+      if (diffInMinutes <= 45) {
+        return `${diffInMinutes}'`;
+      }
+      if (diffInMinutes > 45 && diffInMinutes < 60) {
+        return "HT";
+      }
+      if (diffInMinutes >= 60 && diffInMinutes <= 105) {
+        return `${diffInMinutes - 15}'`;
+      }
+      return `90+`;
+    }
+    case "PAUSED":
+      return "HT";
+    case "FINISHED":
+      return "FT";
+    case "TIMED": 
+    case "SCHEDULED": {
+      try {
+        const formattedDate = await formatMatchDateTime(utcDate);
+        return formattedDate;
+      } catch (error) {
+        console.error("Error getting formatted date:", error);
+        return getStatusTextSync(status, utcDate);
       }
     }
     default:
