@@ -126,21 +126,16 @@ function Matches() {
           return;
         }
 
-        if (allMatchesData.length === 0) {
-          setNoMatches(true);
-          return;
-        }
-        
-        setIsRateLimited(false);
-        
         let favoriteTeamMatch = null;
         if (favoriteTeam && favoriteTeam.favorite_team_id) {
           
-          favoriteTeamMatch = allMatchesData.find(
-            (match) =>
-              match.homeTeam.id === favoriteTeam.favorite_team_id ||
-              match.awayTeam.id === favoriteTeam.favorite_team_id
-          );
+          if (allMatchesData && allMatchesData.length > 0) {
+            favoriteTeamMatch = allMatchesData.find(
+              (match) =>
+                match.homeTeam.id === favoriteTeam.favorite_team_id ||
+                match.awayTeam.id === favoriteTeam.favorite_team_id
+            );
+          }
           
           if (!favoriteTeamMatch) {
             try {
@@ -160,6 +155,15 @@ function Matches() {
             }
           }
         }
+        
+        if (allMatchesData.length === 0) {
+          setNoMatches(true);
+          setFavoriteTeamMatch(favoriteTeamMatch);
+          return;
+        }
+        
+        setIsRateLimited(false);
+        setNoMatches(false);
         
         const matchesByCompetition = {};
         
@@ -253,15 +257,6 @@ function Matches() {
       </div>
     );
 
-    if (noMatches)
-    return (
-      <div className="col-span-2 p-6 text-center bg-gray-300 rounded-xl border border-red-200">
-        <h3 className="text-2xl font-semibold text-purple-500 mb-2">
-          We have no matches to show you today!
-        </h3>
-      </div>
-    );
-
   if (error)
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
@@ -271,6 +266,118 @@ function Matches() {
         </div>
       </div>
     );
+
+  if (noMatches) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        {favoriteTeam && favoriteTeamMatch && (
+          <div
+            className="mb-8"
+            style={{
+              opacity: animateIn ? 1 : 0,
+              transform: animateIn ? "translateY(0)" : "translateY(-10px)",
+              transition: "opacity 0.55s ease 0.1s, transform 0.55s ease 0.1s",
+            }}>
+            <div className="flex items-center bg-purple-900/30 p-2 rounded-t-lg border-t border-l border-r border-purple-800">
+              <FavoriteIcon className="text-purple-400 mr-2" />
+              <span className="text-sm text-purple-400 font-semibold">
+                Your favorite team's upcoming match
+              </span>
+            </div>
+            <div 
+              className="bg-dark-200 rounded-b-xl p-4 border border-purple-800 cursor-pointer hover:bg-dark-300 transition-colors"
+              onClick={() => setSelectedMatch(favoriteTeamMatch)}>
+              <div className="border-b border-dark-400 px-4 py-3">
+                <div className="flex items-center space-x-3">
+                  <img
+                    src={LEAGUE_ICONS[favoriteTeamMatch.competition.id] || "/icons/favicon800x800.png"}
+                    alt=""
+                    className="w-6 h-6 object-contain"
+                  />
+                  <span className="text-lg font-bold text-purple-400">
+                    {formatLeagueName(favoriteTeamMatch.competition.name)}
+                  </span>
+                </div>
+              </div>
+              <div className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center flex-1 justify-end mr-8">
+                    <span className={`text-lg font-bold ${
+                      favoriteTeamMatch.homeTeam.id === favoriteTeam.favorite_team_id
+                        ? "text-purple-400"
+                        : "text-gray-100"
+                    }`}>
+                      {favoriteTeamMatch.homeTeam.shortName || favoriteTeamMatch.homeTeam.name}
+                    </span>
+                    <img
+                      src={favoriteTeamMatch.homeTeam.crest}
+                      alt=""
+                      className="w-12 h-12 object-contain ml-4"
+                    />
+                  </div>
+
+                  <div className="flex flex-col items-center">
+                    {favoriteTeamMatch.status !== "TIMED" && favoriteTeamMatch.status !== "SCHEDULED" && (
+                      <div
+                        className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
+                          favoriteTeamMatch.status
+                        )}`}>
+                        {getStatusTextSync(favoriteTeamMatch.status, favoriteTeamMatch.utcDate)}
+                      </div>
+                    )}
+                    <div className="text-3xl font-bold text-purple-400 flex items-center">
+                      {(() => {
+                        const matchDate = new Date(favoriteTeamMatch.utcDate);
+                        const today = new Date();
+                        const yesterday = new Date();
+                        yesterday.setDate(today.getDate() - 1);
+                        
+                        const isYesterdayOrBefore = matchDate <= yesterday;
+                        const shouldShowScore = favoriteTeamMatch.status === "FINISHED" || isYesterdayOrBefore;
+                        
+                        if (!shouldShowScore && (favoriteTeamMatch.status === "TIMED" || favoriteTeamMatch.status === "SCHEDULED")) {
+                          return getStatusTextSync(favoriteTeamMatch.status, favoriteTeamMatch.utcDate);
+                        } else {
+                          return <span className="mb-8">{favoriteTeamMatch.score.fullTime.home} - {favoriteTeamMatch.score.fullTime.away}</span>;
+                        }
+                      })()}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center flex-1 justify-start ml-8">
+                    <img
+                      src={favoriteTeamMatch.awayTeam.crest}
+                      alt=""
+                      className="w-12 h-12 object-contain mr-4"
+                    />
+                    <span className={`text-lg font-bold ${
+                      favoriteTeamMatch.awayTeam.id === favoriteTeam.favorite_team_id
+                        ? "text-purple-400"
+                        : "text-gray-100"
+                    }`}>
+                      {favoriteTeamMatch.awayTeam.shortName || favoriteTeamMatch.awayTeam.name}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <div className="col-span-2 p-6 text-center bg-dark-200 rounded-xl border border-purple-800">
+          <h3 className="text-2xl font-semibold text-purple-500 mb-2">
+            We have no matches to show you today!
+          </h3>
+        </div>
+        
+        <MatchDetails
+          match={selectedMatch}
+          isOpen={!!selectedMatch}
+          onClose={() => setSelectedMatch(null)}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
