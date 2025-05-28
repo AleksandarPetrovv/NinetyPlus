@@ -368,7 +368,7 @@ function Home() {
           </div>
         ) : (
           <div className="text-center py-8 text-gray-400">
-            No featured matches available right now.
+            No featured matches available right now. Try waiting a minute.
             <br />
             <Link
               to="/matches"

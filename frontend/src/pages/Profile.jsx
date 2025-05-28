@@ -138,14 +138,14 @@ function Profile() {
       
       if (filteredTeams.length === 0) {
         if (hasErrors) {
-          toast.warning("Some leagues timed out. Try a more specific search term.");
+          toast.warning("Some leagues timed out. Try a more specific search term. Try waiting a minute.");
         } else {
-          toast.info("No teams found matching your search.");
+          toast.info("No teams found matching your search. Try waiting a minute.");
         }
       }
     } catch (err) {
-      toast.error("Search failed. Please try again later.");
-      console.error("Failed to search for teams", err);
+      toast.error("Search failed. Please try again later. Try waiting a minute.");
+      console.error("Failed to search for teams. Try waiting a minute.", err);
     } finally {
       setIsSearching(false);
     }
@@ -299,6 +299,12 @@ function Profile() {
                       type="text"
                       value={teamSearchQuery}
                       onChange={(e) => setTeamSearchQuery(e.target.value)}
+                      onKeyDown={(press) => {
+                        console.log(press)
+                        if (press.key === 'Enter') {
+                          handleTeamSearch();
+                        }
+                      }}
                       placeholder="Search for a team..."
                       className="flex-grow bg-dark-400 text-gray-200 px-3 py-2 rounded-l-md border border-dark-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
                     />

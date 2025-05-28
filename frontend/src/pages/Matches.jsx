@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { getMatches } from "../services/footballService";
-import { TOP_LEAGUES } from "../config/leagues";
 import MatchDetails from "../components/MatchDetails";
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { LEAGUE_ICONS } from "../config/leagueIcons";
@@ -13,13 +11,14 @@ import {
 } from "../utils/matchUtils";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
+import RateLimitMessage from "../components/RateLimitMessage";
 
 function MatchCard({ match, onClick, isFavorite, favoriteTeam }) {
   const matchDate = new Date(match.utcDate);
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
-  
+
   const isYesterdayOrBefore = matchDate <= yesterday;
   const shouldShowScore = match.status === "FINISHED" || isYesterdayOrBefore;
 
@@ -58,15 +57,22 @@ function MatchCard({ match, onClick, isFavorite, favoriteTeam }) {
                 {getStatusTextSync(match.status, match.utcDate)}
               </div>
             )}
-            <div className={`text-3xl font-bold text-purple-400 flex items-center ${
-              (!shouldShowScore && (match.status === "TIMED" || match.status === "SCHEDULED")) && 
-              getStatusTextSync(match.status, match.utcDate).includes(",") 
-                ? "text-xl"
-                : ""
-            }`}>
-              {!shouldShowScore && (match.status === "TIMED" || match.status === "SCHEDULED")
-                ? getStatusTextSync(match.status, match.utcDate)
-                : <span className="mb-8">{match.score.fullTime.home} - {match.score.fullTime.away}</span>}
+            <div
+              className={`text-3xl font-bold text-purple-400 flex items-center ${
+                !shouldShowScore &&
+                (match.status === "TIMED" || match.status === "SCHEDULED") &&
+                getStatusTextSync(match.status, match.utcDate).includes(",")
+                  ? "text-xl"
+                  : ""
+              }`}>
+              {!shouldShowScore &&
+              (match.status === "TIMED" || match.status === "SCHEDULED") ? (
+                getStatusTextSync(match.status, match.utcDate)
+              ) : (
+                <span className="mb-8">
+                  {match.score.fullTime.home} - {match.score.fullTime.away}
+                </span>
+              )}
             </div>
           </div>
 
@@ -103,24 +109,24 @@ function Matches() {
   const [animateIn, setAnimateIn] = useState(false);
   const [favoriteTeamMatch, setFavoriteTeamMatch] = useState(null);
   const [noMatches, setNoMatches] = useState(false);
-  
+
   useEffect(() => {
     setAnimateIn(true);
   }, []);
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const fetchData = async () => {
       if (initialLoad) {
         setLoading(true);
       }
-      
+
       try {
         const allMatchesData = await getMatches();
-        
+
         if (!isMounted) return;
-        
+
         if (!allMatchesData) {
           setIsRateLimited(true);
           return;
@@ -128,7 +134,6 @@ function Matches() {
 
         let favoriteTeamMatch = null;
         if (favoriteTeam && favoriteTeam.favorite_team_id) {
-          
           if (allMatchesData && allMatchesData.length > 0) {
             favoriteTeamMatch = allMatchesData.find(
               (match) =>
@@ -136,47 +141,59 @@ function Matches() {
                 match.awayTeam.id === favoriteTeam.favorite_team_id
             );
           }
-          
+
           if (!favoriteTeamMatch) {
             try {
-              const response = await api.get(`/matches/team/${favoriteTeam.favorite_team_id}/`);
-              
-              if (response.data && response.data.matches && response.data.matches.length > 0) {
+              const response = await api.get(
+                `/matches/team/${favoriteTeam.favorite_team_id}/`
+              );
+
+              if (
+                response.data &&
+                response.data.matches &&
+                response.data.matches.length > 0
+              ) {
                 const upcomingMatches = response.data.matches
-                  .filter(match => match.status === "SCHEDULED" || match.status === "TIMED")
+                  .filter(
+                    (match) =>
+                      match.status === "SCHEDULED" || match.status === "TIMED"
+                  )
                   .sort((a, b) => new Date(a.utcDate) - new Date(b.utcDate));
-                
+
                 if (upcomingMatches.length > 0) {
                   favoriteTeamMatch = upcomingMatches[0];
                 }
               }
             } catch (err) {
-              console.error("Failed to fetch favorite team's upcoming match", err);
+              console.error(
+                "Failed to fetch favorite team's upcoming match",
+                err
+              );
             }
           }
         }
-        
+
         if (allMatchesData.length === 0) {
           setNoMatches(true);
           setFavoriteTeamMatch(favoriteTeamMatch);
           return;
         }
-        
+
         setIsRateLimited(false);
         setNoMatches(false);
-        
+
         const matchesByCompetition = {};
-        
-        allMatchesData.forEach(match => {
+
+        allMatchesData.forEach((match) => {
           const competitionId = match.competition.id;
           if (!matchesByCompetition[competitionId]) {
             matchesByCompetition[competitionId] = [];
           }
           matchesByCompetition[competitionId].push(match);
         });
-        
+
         const leagueOrder = [2021, 2014, 2002, 2019, 2015, 2001, 2146];
-        
+
         const allProcessedMatches = [];
 
         if (favoriteTeamMatch) {
@@ -184,36 +201,39 @@ function Matches() {
 
           const competitionId = favoriteTeamMatch.competition.id;
           if (matchesByCompetition[competitionId]) {
-            matchesByCompetition[competitionId] = matchesByCompetition[competitionId].filter(
-              match => match.id !== favoriteTeamMatch.id
-            );
+            matchesByCompetition[competitionId] = matchesByCompetition[
+              competitionId
+            ].filter((match) => match.id !== favoriteTeamMatch.id);
           }
         }
-        
-        leagueOrder.forEach(competitionId => {
+
+        leagueOrder.forEach((competitionId) => {
           if (matchesByCompetition[competitionId]) {
             allProcessedMatches.push(...matchesByCompetition[competitionId]);
           }
         });
-        
+
         Object.keys(matchesByCompetition)
           .map(Number)
-          .filter(id => !leagueOrder.includes(id))
-          .forEach(competitionId => {
+          .filter((id) => !leagueOrder.includes(id))
+          .forEach((competitionId) => {
             allProcessedMatches.push(...matchesByCompetition[competitionId]);
           });
-        
-        if (JSON.stringify(allProcessedMatches) !== JSON.stringify(prevMatchesRef.current)) {
+
+        if (
+          JSON.stringify(allProcessedMatches) !==
+          JSON.stringify(prevMatchesRef.current)
+        ) {
           prevMatchesRef.current = allProcessedMatches;
           setMatches(allProcessedMatches);
-          
+
           setFavoriteTeamMatch(favoriteTeamMatch);
         }
       } catch (err) {
         console.error("Error fetching matches:", err);
-        
+
         if (!isMounted) return;
-        
+
         if (err.response?.status === 429) {
           setIsRateLimited(true);
         } else {
@@ -226,11 +246,11 @@ function Matches() {
         }
       }
     };
-    
+
     fetchData();
-    
+
     const interval = setInterval(fetchData, 180000);
-    
+
     return () => {
       isMounted = false;
       clearInterval(interval);
@@ -244,18 +264,7 @@ function Matches() {
       </div>
     );
 
-  if (isRateLimited)
-    return (
-      <div className="col-span-2 p-8 text-center bg-yellow-50 rounded-xl border border-yellow-200">
-        <AccessTimeIcon className="w-12 h-12 mx-auto mb-4 text-yellow-400" />
-        <h3 className="text-lg font-semibold text-yellow-800 mb-2">
-          API Rate Limit Reached
-        </h3>
-        <p className="text-yellow-600">
-          Please wait 60 seconds. The API rate limit is 10 calls / minute.
-        </p>
-      </div>
-    );
+  if (isRateLimited) return <RateLimitMessage />;
 
   if (error)
     return (
@@ -284,13 +293,16 @@ function Matches() {
                 Your favorite team's upcoming match
               </span>
             </div>
-            <div 
+            <div
               className="bg-dark-200 rounded-b-xl p-4 border border-purple-800 cursor-pointer hover:bg-dark-300 transition-colors"
               onClick={() => setSelectedMatch(favoriteTeamMatch)}>
               <div className="border-b border-dark-400 px-4 py-3">
                 <div className="flex items-center space-x-3">
                   <img
-                    src={LEAGUE_ICONS[favoriteTeamMatch.competition.id] || "/icons/favicon800x800.png"}
+                    src={
+                      LEAGUE_ICONS[favoriteTeamMatch.competition.id] ||
+                      "/icons/favicon800x800.png"
+                    }
                     alt=""
                     className="w-6 h-6 object-contain"
                   />
@@ -302,12 +314,15 @@ function Matches() {
               <div className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center flex-1 justify-end mr-8">
-                    <span className={`text-lg font-bold ${
-                      favoriteTeamMatch.homeTeam.id === favoriteTeam.favorite_team_id
-                        ? "text-purple-400"
-                        : "text-gray-100"
-                    }`}>
-                      {favoriteTeamMatch.homeTeam.shortName || favoriteTeamMatch.homeTeam.name}
+                    <span
+                      className={`text-lg font-bold ${
+                        favoriteTeamMatch.homeTeam.id ===
+                        favoriteTeam.favorite_team_id
+                          ? "text-purple-400"
+                          : "text-gray-100"
+                      }`}>
+                      {favoriteTeamMatch.homeTeam.shortName ||
+                        favoriteTeamMatch.homeTeam.name}
                     </span>
                     <img
                       src={favoriteTeamMatch.homeTeam.crest}
@@ -317,28 +332,46 @@ function Matches() {
                   </div>
 
                   <div className="flex flex-col items-center">
-                    {favoriteTeamMatch.status !== "TIMED" && favoriteTeamMatch.status !== "SCHEDULED" && (
-                      <div
-                        className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
-                          favoriteTeamMatch.status
-                        )}`}>
-                        {getStatusTextSync(favoriteTeamMatch.status, favoriteTeamMatch.utcDate)}
-                      </div>
-                    )}
+                    {favoriteTeamMatch.status !== "TIMED" &&
+                      favoriteTeamMatch.status !== "SCHEDULED" && (
+                        <div
+                          className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
+                            favoriteTeamMatch.status
+                          )}`}>
+                          {getStatusTextSync(
+                            favoriteTeamMatch.status,
+                            favoriteTeamMatch.utcDate
+                          )}
+                        </div>
+                      )}
                     <div className="text-3xl font-bold text-purple-400 flex items-center">
                       {(() => {
                         const matchDate = new Date(favoriteTeamMatch.utcDate);
                         const today = new Date();
                         const yesterday = new Date();
                         yesterday.setDate(today.getDate() - 1);
-                        
+
                         const isYesterdayOrBefore = matchDate <= yesterday;
-                        const shouldShowScore = favoriteTeamMatch.status === "FINISHED" || isYesterdayOrBefore;
-                        
-                        if (!shouldShowScore && (favoriteTeamMatch.status === "TIMED" || favoriteTeamMatch.status === "SCHEDULED")) {
-                          return getStatusTextSync(favoriteTeamMatch.status, favoriteTeamMatch.utcDate);
+                        const shouldShowScore =
+                          favoriteTeamMatch.status === "FINISHED" ||
+                          isYesterdayOrBefore;
+
+                        if (
+                          !shouldShowScore &&
+                          (favoriteTeamMatch.status === "TIMED" ||
+                            favoriteTeamMatch.status === "SCHEDULED")
+                        ) {
+                          return getStatusTextSync(
+                            favoriteTeamMatch.status,
+                            favoriteTeamMatch.utcDate
+                          );
                         } else {
-                          return <span className="mb-8">{favoriteTeamMatch.score.fullTime.home} - {favoriteTeamMatch.score.fullTime.away}</span>;
+                          return (
+                            <span className="mb-8">
+                              {favoriteTeamMatch.score.fullTime.home} -{" "}
+                              {favoriteTeamMatch.score.fullTime.away}
+                            </span>
+                          );
                         }
                       })()}
                     </div>
@@ -350,12 +383,15 @@ function Matches() {
                       alt=""
                       className="w-12 h-12 object-contain mr-4"
                     />
-                    <span className={`text-lg font-bold ${
-                      favoriteTeamMatch.awayTeam.id === favoriteTeam.favorite_team_id
-                        ? "text-purple-400"
-                        : "text-gray-100"
-                    }`}>
-                      {favoriteTeamMatch.awayTeam.shortName || favoriteTeamMatch.awayTeam.name}
+                    <span
+                      className={`text-lg font-bold ${
+                        favoriteTeamMatch.awayTeam.id ===
+                        favoriteTeam.favorite_team_id
+                          ? "text-purple-400"
+                          : "text-gray-100"
+                      }`}>
+                      {favoriteTeamMatch.awayTeam.shortName ||
+                        favoriteTeamMatch.awayTeam.name}
                     </span>
                   </div>
                 </div>
@@ -363,13 +399,13 @@ function Matches() {
             </div>
           </div>
         )}
-        
+
         <div className="col-span-2 p-6 text-center bg-dark-200 rounded-xl border border-purple-800">
           <h3 className="text-2xl font-semibold text-purple-500 mb-2">
             We have no matches to show you today!
           </h3>
         </div>
-        
+
         <MatchDetails
           match={selectedMatch}
           isOpen={!!selectedMatch}
@@ -382,7 +418,6 @@ function Matches() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="grid gap-4 mb-8">
-
         {favoriteTeam && favoriteTeamMatch && (
           <div
             className="mb-16"
@@ -397,13 +432,16 @@ function Matches() {
                 Your favorite team's match
               </span>
             </div>
-            <div 
+            <div
               className="bg-dark-200 rounded-b-xl p-4 border border-purple-800 cursor-pointer hover:bg-dark-300 transition-colors"
               onClick={() => setSelectedMatch(favoriteTeamMatch)}>
               <div className="border-b border-dark-400 px-4 py-3">
                 <div className="flex items-center space-x-3">
                   <img
-                    src={LEAGUE_ICONS[favoriteTeamMatch.competition.id] || "/icons/favicon800x800.png"}
+                    src={
+                      LEAGUE_ICONS[favoriteTeamMatch.competition.id] ||
+                      "/icons/favicon800x800.png"
+                    }
                     alt=""
                     className="w-6 h-6 object-contain"
                   />
@@ -415,12 +453,15 @@ function Matches() {
               <div className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center flex-1 justify-end mr-8">
-                    <span className={`text-lg font-bold ${
-                      favoriteTeamMatch.homeTeam.id === favoriteTeam.favorite_team_id
-                        ? "text-purple-400"
-                        : "text-gray-100"
-                    }`}>
-                      {favoriteTeamMatch.homeTeam.shortName || favoriteTeamMatch.homeTeam.name}
+                    <span
+                      className={`text-lg font-bold ${
+                        favoriteTeamMatch.homeTeam.id ===
+                        favoriteTeam.favorite_team_id
+                          ? "text-purple-400"
+                          : "text-gray-100"
+                      }`}>
+                      {favoriteTeamMatch.homeTeam.shortName ||
+                        favoriteTeamMatch.homeTeam.name}
                     </span>
                     <img
                       src={favoriteTeamMatch.homeTeam.crest}
@@ -430,28 +471,46 @@ function Matches() {
                   </div>
 
                   <div className="flex flex-col items-center">
-                    {favoriteTeamMatch.status !== "TIMED" && favoriteTeamMatch.status !== "SCHEDULED" && (
-                      <div
-                        className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
-                          favoriteTeamMatch.status
-                        )}`}>
-                        {getStatusTextSync(favoriteTeamMatch.status, favoriteTeamMatch.utcDate)}
-                      </div>
-                    )}
+                    {favoriteTeamMatch.status !== "TIMED" &&
+                      favoriteTeamMatch.status !== "SCHEDULED" && (
+                        <div
+                          className={`px-3 py-1 text-sm rounded-md mb-2 ${getStatusColor(
+                            favoriteTeamMatch.status
+                          )}`}>
+                          {getStatusTextSync(
+                            favoriteTeamMatch.status,
+                            favoriteTeamMatch.utcDate
+                          )}
+                        </div>
+                      )}
                     <div className="text-3xl font-bold text-purple-400 flex items-center">
                       {(() => {
                         const matchDate = new Date(favoriteTeamMatch.utcDate);
                         const today = new Date();
                         const yesterday = new Date();
                         yesterday.setDate(today.getDate() - 1);
-                        
+
                         const isYesterdayOrBefore = matchDate <= yesterday;
-                        const shouldShowScore = favoriteTeamMatch.status === "FINISHED" || isYesterdayOrBefore;
-                        
-                        if (!shouldShowScore && (favoriteTeamMatch.status === "TIMED" || favoriteTeamMatch.status === "SCHEDULED")) {
-                          return getStatusTextSync(favoriteTeamMatch.status, favoriteTeamMatch.utcDate);
+                        const shouldShowScore =
+                          favoriteTeamMatch.status === "FINISHED" ||
+                          isYesterdayOrBefore;
+
+                        if (
+                          !shouldShowScore &&
+                          (favoriteTeamMatch.status === "TIMED" ||
+                            favoriteTeamMatch.status === "SCHEDULED")
+                        ) {
+                          return getStatusTextSync(
+                            favoriteTeamMatch.status,
+                            favoriteTeamMatch.utcDate
+                          );
                         } else {
-                          return <span className="mb-8">{favoriteTeamMatch.score.fullTime.home} - {favoriteTeamMatch.score.fullTime.away}</span>;
+                          return (
+                            <span className="mb-8">
+                              {favoriteTeamMatch.score.fullTime.home} -{" "}
+                              {favoriteTeamMatch.score.fullTime.away}
+                            </span>
+                          );
                         }
                       })()}
                     </div>
@@ -463,12 +522,15 @@ function Matches() {
                       alt=""
                       className="w-12 h-12 object-contain mr-4"
                     />
-                    <span className={`text-lg font-bold ${
-                      favoriteTeamMatch.awayTeam.id === favoriteTeam.favorite_team_id
-                        ? "text-purple-400"
-                        : "text-gray-100"
-                    }`}>
-                      {favoriteTeamMatch.awayTeam.shortName || favoriteTeamMatch.awayTeam.name}
+                    <span
+                      className={`text-lg font-bold ${
+                        favoriteTeamMatch.awayTeam.id ===
+                        favoriteTeam.favorite_team_id
+                          ? "text-purple-400"
+                          : "text-gray-100"
+                      }`}>
+                      {favoriteTeamMatch.awayTeam.shortName ||
+                        favoriteTeamMatch.awayTeam.name}
                     </span>
                   </div>
                 </div>
@@ -479,17 +541,22 @@ function Matches() {
 
         <div className="grid grid-cols-1 gap-4">
           {(() => {
-            let currentCompetition = null; 
-            let elements = [];    
+            let currentCompetition = null;
+            let elements = [];
             matches.forEach((match, index) => {
               if (favoriteTeamMatch && match.id === favoriteTeamMatch.id) {
                 return;
               }
 
-              if (!currentCompetition || currentCompetition !== match.competition.id) {
-                currentCompetition = match.competition.id;            
+              if (
+                !currentCompetition ||
+                currentCompetition !== match.competition.id
+              ) {
+                currentCompetition = match.competition.id;
                 elements.push(
-                  <div key={`league-${match.competition.id}`} className="bg-dark-300 rounded-t-lg p-3 mt-8 first:mt-0">
+                  <div
+                    key={`league-${match.competition.id}`}
+                    className="bg-dark-300 rounded-t-lg p-3 mt-8 first:mt-0">
                     <div className="flex items-center space-x-3">
                       <img
                         src={LEAGUE_ICONS[match.competition.id]}
@@ -497,7 +564,9 @@ function Matches() {
                         className="w-6 h-6 object-contain"
                       />
                       <span className="font-bold text-gray-200">
-                        {match.competition.country ? `${match.competition.country} - ` : ''}
+                        {match.competition.country
+                          ? `${match.competition.country} - `
+                          : ""}
                         {formatLeagueName(match.competition.name)}
                       </span>
                     </div>
@@ -522,7 +591,7 @@ function Matches() {
                 </div>
               );
             });
-            
+
             return elements;
           })()}
         </div>
