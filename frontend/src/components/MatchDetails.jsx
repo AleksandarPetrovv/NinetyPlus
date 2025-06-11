@@ -427,6 +427,16 @@ function MatchDetails({ match, isOpen, onClose }) {
                               homeScore += commas;
                             }
                           }
+
+                          if (event.type === "own") {
+                            homeScore += 1;
+
+                            const commas = (event.time.match(/,/g) || [])
+                              .length;
+                            if (commas > 0) {
+                              homeScore += commas;
+                            }
+                          }
                         });
 
                         awayTeamEvents.forEach((event) => {
@@ -439,27 +449,14 @@ function MatchDetails({ match, isOpen, onClose }) {
                               awayScore += commas;
                             }
                           }
-                        });
 
-                        homeTeamEvents.forEach((event) => {
                           if (event.type === "own") {
                             awayScore += 1;
+
                             const commas = (event.time.match(/,/g) || [])
                               .length;
                             if (commas > 0) {
                               awayScore += commas;
-                            }
-                          }
-                        });
-
-                        awayTeamEvents.forEach((event) => {
-                          if (event.type === "own") {
-                            homeScore += 1;
-
-                            const commas = (event.time.match(/,/g) || [])
-                              .length;
-                            if (commas > 0) {
-                              homeScore += commas;
                             }
                           }
                         });
