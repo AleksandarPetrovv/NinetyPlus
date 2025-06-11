@@ -482,7 +482,7 @@ function MatchDetails({ match, isOpen, onClose }) {
                                 className="w-20 h-20 object-contain mb-3"
                               />
                               <div className="font-medium text-lg text-center mb-2">
-                                {match.homeTeam.name}
+                                {match.homeTeam.shortName}
                               </div>
                               {homeTeamEvents.length > 0 && (
                                 <div
@@ -493,19 +493,15 @@ function MatchDetails({ match, isOpen, onClose }) {
                                     transform: "translateX(-45%)",
                                   }}>
                                   {homeTeamEvents.map((event, idx) => {
-                                    const formattedPlayer =
-                                      event.player.replace(/^([A-Z]) /, "$1. ");
-                                    const formattedTime = event.time.replace(
-                                      / - /,
-                                      " "
-                                    );
-
-                                    return (
+                                    const formattedPlayer = event.player.replace(/^([A-Z]) /, "$1. ");
+                                    const times = event.time.split(',').map(time => time.trim());
+                                    
+                                    return times.map((time, timeIdx) => (
                                       <div
-                                        key={idx}
+                                        key={`${idx}-${timeIdx}`}
                                         className="text-gray-300 flex items-center justify-center mb-1">
                                         <span>
-                                          {formattedPlayer} {formattedTime}
+                                          {formattedPlayer} - {time}
                                           {event.type === "own" && " (OG)"}
                                         </span>
                                         {event.type === "goal" && (
@@ -537,7 +533,7 @@ function MatchDetails({ match, isOpen, onClose }) {
                                           </svg>
                                         )}
                                       </div>
-                                    );
+                                    ));
                                   })}
                                 </div>
                               )}
@@ -554,7 +550,7 @@ function MatchDetails({ match, isOpen, onClose }) {
                                 className="w-20 h-20 object-contain mb-3"
                               />
                               <div className="font-medium text-lg text-center mb-2">
-                                {match.awayTeam.name}
+                                {match.awayTeam.shortName}
                               </div>
                               {awayTeamEvents.length > 0 && (
                                 <div
@@ -565,19 +561,15 @@ function MatchDetails({ match, isOpen, onClose }) {
                                     transform: "translateX(46%)",
                                   }}>
                                   {awayTeamEvents.map((event, idx) => {
-                                    const formattedPlayer =
-                                      event.player.replace(/^([A-Z]) /, "$1. ");
-                                    const formattedTime = event.time.replace(
-                                      / - /,
-                                      " "
-                                    );
-
-                                    return (
+                                    const formattedPlayer = event.player.replace(/^([A-Z]) /, "$1. ");
+                                    const times = event.time.split(',').map(time => time.trim());
+                                    
+                                    return times.map((time, timeIdx) => (
                                       <div
-                                        key={idx}
+                                        key={`${idx}-${timeIdx}`}
                                         className="text-gray-300 flex items-center justify-center mb-1">
                                         <span>
-                                          {formattedPlayer} {formattedTime}
+                                          {formattedPlayer} - {time}
                                           {event.type === "own" && " (OG)"}
                                         </span>
                                         {event.type === "goal" && (
@@ -609,7 +601,7 @@ function MatchDetails({ match, isOpen, onClose }) {
                                           </svg>
                                         )}
                                       </div>
-                                    );
+                                    ));
                                   })}
                                 </div>
                               )}

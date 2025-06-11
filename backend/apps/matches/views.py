@@ -339,8 +339,8 @@ def get_match_events(request, match_id):
                                 time_el = item.select_one('.GoalScore__Time')
                                 
                                 if player_el and time_el:
-                                    player_name = player_el.get_text().strip()
-                                    time = time_el.get_text().strip().replace(' - ', '')
+                                    player_name = player_el.get_text().strip().replace('-', '')
+                                    time = time_el.get_text().strip().replace('-', '').replace(' ', '')
                                     
                                     events_array.append({
                                         'type': 'red',
@@ -360,8 +360,8 @@ def get_match_events(request, match_id):
                                 time_el = item.select_one('.GoalScore__Time')
                                 
                                 if player_el and time_el:
-                                    player_name = player_el.get_text().strip()
-                                    time = time_el.get_text().strip().replace(' - ', '')
+                                    player_name = player_el.get_text().strip().replace('-', '')
+                                    time = time_el.get_text().strip().replace('-', '').replace(' ', '')
                                     
                                     if 'OG' in time:
                                         events_array.append({
