@@ -5,7 +5,7 @@
 
 **NinetyPlus** is a real-time football scoring app with a social edge. Get live scores, stats, fixtures, and **comment on matches** with fans around the world. Whether it's El Clásico or a late-night Premier League clash, join the conversation and never miss a moment.
 
-**Demo: https://drive.google.com/file/d/1vYsciy7GGdijxVsKXTshgTB4xoZ3pdOE/view?usp=drive_link**
+**Demo: https://drive.google.com/file/d/1KstOzOwPAnhDqjehT3yYA0Rgq1XyjGY9/view?usp=share_link**
 
   
 
